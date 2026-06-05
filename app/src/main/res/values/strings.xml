@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AlfaAnimate</string>
+    <string name="tool_pen">Pen</string>
+    <string name="tool_brush">Brush</string>
+    <string name="tool_eraser">Eraser</string>
+    <string name="tool_fill">Fill</string>
+    <string name="action_play">Play</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_redo">Redo</string>
+    <string name="action_add_frame">Add Frame</string>
+    <string name="action_delete_frame">Delete Frame</string>
+    <string name="action_duplicate_frame">Duplicate Frame</string>
+    <string name="action_add_layer">Add Layer</string>
+    <string name="action_delete_layer">Delete Layer</string>
+    <string name="action_onion_skin">Onion Skin</string>
+    <string name="label_layers">Layers</string>
+    <string name="label_timeline">Timeline</string>
+    <string name="label_frame">Frame</string>
+    <string name="dialog_delete_frame_title">Delete Frame</string>
+    <string name="dialog_delete_frame_message">Delete the current frame?</string>
+    <string name="dialog_color_title">Choose Color</string>
+    <string name="btn_ok">OK</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_delete">Delete</string>
+</resources>

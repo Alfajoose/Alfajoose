@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#5865F2</color>
+    <color name="colorPrimaryDark">#4752C4</color>
+    <color name="colorAccent">#BD93F9</color>
+    <color name="colorBackground">#13131F</color>
+    <color name="colorSurface">#1E1E2E</color>
+    <color name="colorSurface2">#2E2E4E</color>
+    <color name="colorOnSurface">#FFFFFF</color>
+    <color name="colorSubtext">#888AAA</color>
+    <color name="colorSuccess">#50FA7B</color>
+    <color name="colorError">#FF6B6B</color>
+    <color name="colorWarning">#FFB86C</color>
+    <color name="colorHighlight">#44475A</color>
+</resources>
