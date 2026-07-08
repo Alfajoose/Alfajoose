@@ -48,7 +48,11 @@
       gap: 6px;
       flex-shrink: 0;
       z-index: 10;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
     }
+    #topbar::-webkit-scrollbar { display: none; }
 
     .logo { font-size: 15px; font-weight: 700; color: var(--purple); letter-spacing: 0.5px; margin-right: 6px; white-space: nowrap; }
 
@@ -407,6 +411,22 @@
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: var(--panel); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Mobile ─────────────────────────────── */
+    @media (max-width: 599px) {
+      :root { --toolbar: 52px; --timeline: 110px; --topbar: 46px; }
+
+      .tool-btn { width: 38px; height: 38px; font-size: 16px; }
+      .size-wrap input[type=range] { height: 54px; }
+
+      /* hide less-critical toolbar items on very small screens */
+      #zoom-in-btn, #zoom-out-btn { display: none; }
+
+      /* make frame thumbnails smaller */
+      .frame-preview { width: 60px; height: 40px; }
+      .frame-cell { width: 60px; }
+      .frame-preview canvas { width: 60px; height: 40px; }
+    }
   </style>
 </head>
 <body>
@@ -1191,15 +1211,31 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Init ──────────────────────────────────────────────────
-saveHist();         // baseline undo entry
+saveHist();
 syncUndoRedo();
 syncOpacitySlider();
 
-requestAnimationFrame(() => {
-  fitScreen();
-  render();
-  refreshTimeline();
-});
+// Close layers panel on narrow screens by default
+if (window.innerWidth < 600) {
+  document.getElementById('layers-panel').classList.add('closed');
+}
+
+// Wait until the wrapper has real dimensions before fitting
+// (rAF alone fires too early on mobile before layout settles)
+function initFit() {
+  if (wrapper.clientWidth > 10 && wrapper.clientHeight > 10) {
+    fitScreen();
+    render();
+    refreshTimeline();
+  } else {
+    setTimeout(initFit, 30);
+  }
+}
+initFit();
+
+// Refit whenever the window resizes (orientation change, browser chrome)
+const ro = new ResizeObserver(() => { if (!S.playing) fitScreen(); });
+ro.observe(wrapper);
 </script>
 </body>
 </html>
