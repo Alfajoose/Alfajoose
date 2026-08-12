@@ -1,0 +1,12 @@
+{
+  "appId": "com.alfajoose.frametwelve",
+  "appName": "Frame Twelve",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#0e0e0e",
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Generate the Frame Twelve app icons.
+"""Generate the Frame Twelve icons.
 
-The mark is three stacked frame outlines receding into the distance — the
-app's own onion-skin idea, which is also what "frame by frame" means. Colours
-come from the web app's palette (--accent / --a2).
+The mark is three stacked cels receding into the distance — the app's own
+onion-skin idea, which is what "frame by frame" means — with the active cel
+carrying the numerals. Colours come from the web app's palette (--accent).
 
+Writes the Android launcher icons at every density plus the web startup logo.
 Everything is drawn at 4x and downsampled, because Pillow's shape drawing is
 not antialiased.
 
@@ -14,15 +15,40 @@ not antialiased.
 import os
 from PIL import Image, ImageDraw, ImageFont
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+RES = os.path.join(HERE, '..', 'android', 'app', 'src', 'main', 'res')
+WEB = os.path.join(HERE, '..', '..', 'web')
+
 # Regeneration should work off this machine too, so try a few well-known
 # families before giving up on the numerals.
 FONT_CANDIDATES = [
     '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
     '/System/Library/Fonts/Supplemental/Arial Bold.ttf',
-    '/System/Library/Fonts/Helvetica.ttc',
     '/Library/Fonts/Arial Bold.ttf',
     'C:/Windows/Fonts/arialbd.ttf',
 ]
+
+SS = 4                      # supersample factor
+SIZE = 1024                 # master size, downsampled per density
+S = SIZE * SS
+
+ACCENT = (45, 82, 184)      # --accent #2d52b8
+ACCENT_DEEP = (22, 40, 96)
+WHITE = (255, 255, 255)
+
+FW, FH = 462, 344           # frame geometry, in master pixels
+RADIUS, STROKE, STEP = 38, 32, 62
+LAYERS = [(0, 70), (1, 140), (2, 255)]   # back -> front, alpha
+
+# The solid front cel carries the visual weight, so a bbox-centred stack reads
+# as sitting low and right. Nudge the group back the other way.
+OPTICAL = -20
+
+# Android launcher densities: px per bucket for a 48dp icon, and 108dp for the
+# adaptive layers.
+DENSITIES = {
+    'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4,
+}
 
 
 def load_font(px):
@@ -35,31 +61,8 @@ def load_font(px):
     print('  ! no bold font found — drawing the mark without numerals')
     return None
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-ASSETS = os.path.join(HERE, '..', 'assets')
-WEB = os.path.join(HERE, '..', '..', 'web')
-
-SS = 4            # supersample factor
-SIZE = 1024
-S = SIZE * SS
-
-ACCENT = (45, 82, 184)     # --accent #2d52b8
-ACCENT_DEEP = (22, 40, 96)
-WHITE = (255, 255, 255)
-
-# frame geometry, in final-image pixels
-FW, FH = 462, 344
-RADIUS = 38
-STROKE = 32
-STEP = 62                  # diagonal offset between stacked frames
-# The solid front cel carries the visual weight, so a bbox-centred stack reads
-# as sitting low and right. Nudge the group back the other way.
-OPTICAL = -20
-LAYERS = [(0, 70), (1, 140), (2, 255)]   # (index, alpha) back -> front
-
 
 def gradient(size, top, bottom):
-    """Vertical gradient."""
     img = Image.new('RGB', (1, size), top)
     px = img.load()
     for y in range(size):
@@ -68,8 +71,7 @@ def gradient(size, top, bottom):
     return img.resize((size, size), Image.NEAREST)
 
 
-def draw_stack(scale=1.0, color=WHITE, numerals=True):
-    """Transparent layer holding the three frames, centred."""
+def draw_stack(scale=1.0, numerals=True):
     layer = Image.new('RGBA', (S, S), (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
 
@@ -78,73 +80,72 @@ def draw_stack(scale=1.0, color=WHITE, numerals=True):
     stroke = max(1, round(STROKE * scale * SS))
     radius = RADIUS * scale * SS
 
-    span_w = fw + step * (len(LAYERS) - 1)
-    span_h = fh + step * (len(LAYERS) - 1)
-    x0 = (S - span_w) / 2 + OPTICAL * scale * SS
-    y0 = (S - span_h) / 2 + OPTICAL * scale * SS
+    x0 = (S - (fw + step * 2)) / 2 + OPTICAL * scale * SS
+    y0 = (S - (fh + step * 2)) / 2 + OPTICAL * scale * SS
 
     for i, alpha in LAYERS:
-        x, y = x0 + step * i, y0 + step * i
-        box = (x, y, x + fw, y + fh)
+        box = (x0 + step * i, y0 + step * i,
+               x0 + step * i + fw, y0 + step * i + fh)
 
         if i != len(LAYERS) - 1:
-            # ghosted frames behind: outline only
             d.rounded_rectangle(box, radius=radius,
-                                outline=color + (alpha,), width=stroke)
+                                outline=WHITE + (alpha,), width=stroke)
             continue
 
-        # Active cel: solid, so the numerals have something to sit on and the
-        # stack gains a clear focal point instead of reading as "duplicate".
-        d.rounded_rectangle(box, radius=radius, fill=color + (255,))
-
+        # Active cel: solid, giving the numerals a ground and the stack a
+        # focal point instead of reading as a generic "duplicate" glyph.
+        d.rounded_rectangle(box, radius=radius, fill=WHITE + (255,))
         if numerals:
             font = load_font(round(fh * 0.62))
             if font:
-                cx, cy = x + fw / 2, y + fh / 2
-                # anchor='mm' centres on the glyph box, not the line box
-                d.text((cx, cy), '12', font=font, fill=ACCENT + (255,),
-                       anchor='mm')
+                d.text(((box[0] + box[2]) / 2, (box[1] + box[3]) / 2), '12',
+                       font=font, fill=ACCENT + (255,), anchor='mm')
     return layer
 
 
-def down(img):
-    return img.resize((SIZE, SIZE), Image.LANCZOS)
+def down(img, size=SIZE):
+    return img.resize((size, size), Image.LANCZOS)
 
 
-def save(img, path, size=None):
-    if size:
-        img = img.resize((size, size), Image.LANCZOS)
-    img.save(path)
-    print(f'  {os.path.relpath(path)}  {img.size[0]}x{img.size[1]}')
+def circle_mask(img):
+    """Round icon: the legacy pre-adaptive circular variant."""
+    mask = Image.new('L', (S, S), 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, S, S), fill=255)
+    out = img.resize((S, S), Image.LANCZOS).convert('RGBA')
+    out.putalpha(mask)
+    return out
 
 
 def main():
-    os.makedirs(ASSETS, exist_ok=True)
     print('generating icons:')
+    bg_master = gradient(SIZE, ACCENT, ACCENT_DEEP).convert('RGBA')
+    full = Image.alpha_composite(bg_master, down(draw_stack(1.0)))
 
-    bg = gradient(SIZE, ACCENT, ACCENT_DEEP).convert('RGBA')
+    # Adaptive layers are 108dp with only the centre 72dp guaranteed visible,
+    # so the mark is scaled to sit inside that safe zone.
+    fg_master = down(draw_stack(0.62))
 
-    # Full icon: gradient + full-size stack.
-    full = Image.alpha_composite(bg, down(draw_stack(1.0)))
-    save(full, os.path.join(ASSETS, 'icon.png'))
-    save(full, os.path.join(ASSETS, 'favicon.png'), 48)
+    for bucket, factor in DENSITIES.items():
+        d = os.path.join(RES, f'mipmap-{bucket}')
+        os.makedirs(d, exist_ok=True)
 
-    # Android adaptive: foreground must stay inside the centre 66% safe zone,
-    # since the launcher masks and can zoom the outer edge away.
-    fg = down(draw_stack(0.62))
-    save(fg, os.path.join(ASSETS, 'android-icon-foreground.png'))
-    save(bg, os.path.join(ASSETS, 'android-icon-background.png'))
+        legacy = round(48 * factor)      # ic_launcher / ic_launcher_round
+        adaptive = round(108 * factor)   # foreground / background layers
 
-    # Monochrome (themed icons): solid white, no fill tint.
-    mono = down(draw_stack(0.62, WHITE, numerals=False))
-    save(mono, os.path.join(ASSETS, 'android-icon-monochrome.png'))
+        down(full, legacy).save(os.path.join(d, 'ic_launcher.png'))
+        down(circle_mask(full), legacy).save(
+            os.path.join(d, 'ic_launcher_round.png'))
+        down(fg_master, adaptive).save(
+            os.path.join(d, 'ic_launcher_foreground.png'))
+        down(bg_master, adaptive).save(
+            os.path.join(d, 'ic_launcher_background.png'))
+        print(f'  mipmap-{bucket:<8} {legacy}px legacy, {adaptive}px adaptive')
 
-    # Splash: mark on transparent, app.json paints the background.
-    save(down(draw_stack(0.55)), os.path.join(ASSETS, 'splash-icon.png'))
-
-    # The web app's startup logo.
+    # The web app's startup logo, inlined into the HTML as a data URI.
     os.makedirs(WEB, exist_ok=True)
-    save(full, os.path.join(WEB, 'frame_twelve_icon.png'), 256)
+    p = os.path.join(WEB, 'frame_twelve_icon.png')
+    down(full, 256).save(p)
+    print(f'  {os.path.relpath(p)}  256px')
 
 
 if __name__ == '__main__':

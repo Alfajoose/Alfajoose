@@ -1,22 +1,22 @@
 {
-  "name": "native",
+  "name": "frame-twelve",
   "version": "1.0.0",
+  "description": "",
   "main": "index.js",
-  "dependencies": {
-    "expo": "~57.0.12",
-    "expo-file-system": "~57.0.2",
-    "expo-sharing": "~57.0.11",
-    "expo-status-bar": "~57.0.1",
-    "react": "19.2.3",
-    "react-native": "0.86.2",
-    "react-native-webview": "^13.16.1"
-  },
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "bundle-html": "node scripts/bundle-html.js"
+    "sync-web": "node scripts/sync-web.js",
+    "icons": "python3 scripts/make-icons.py"
   },
-  "private": true
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor-community/media": "^9.1.0",
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
+    "esbuild": "^0.28.2"
+  }
 }

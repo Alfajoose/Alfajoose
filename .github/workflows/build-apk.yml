@@ -1,0 +1,79 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Attach the APK to a public release (repo is public)'
+        type: boolean
+        default: false
+  push:
+    branches:
+      - 'claude/**'
+    paths:
+      - 'native/**'
+      - 'web/**'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: native
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: native/package-lock.json
+
+      # AGP 8.13 needs 17+; the runner's Android SDK is already on PATH.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build www and sync to Android
+        run: |
+          npm run sync-web
+          npx cap sync android
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        working-directory: native/android
+
+      - name: Report APK
+        run: |
+          APK=$(find android/app/build/outputs/apk/debug -name '*.apk' | head -1)
+          ls -lh "$APK"
+          echo "apk_path=native/$APK" >> "$GITHUB_ENV"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frame-twelve-debug-apk
+          path: native/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Publish release
+        if: inputs.publish_release
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete frame-twelve-latest --yes --cleanup-tag || true
+          gh release create frame-twelve-latest "${{ env.apk_path }}" \
+            --title "Frame Twelve debug APK" \
+            --notes "Debug build from ${{ github.sha }}. Sideload on Android: allow installs from your browser, then open this APK." \
+            --prerelease
