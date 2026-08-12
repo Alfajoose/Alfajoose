@@ -280,6 +280,7 @@ canvas{display:block}
 .lyr-more-item:hover{background:rgba(255,255,255,.08)}
 .lyr-more-item.danger{color:#ff7777}
 .lyr-more-item svg{width:15px;height:15px;color:rgba(226,226,226,.68);flex-shrink:0}
+.lyr-more-sep{height:1px;margin:4px 6px;background:rgba(255,255,255,.09)}
 .lhdr{height:38px;padding:0 10px 0 12px;font-size:11px;font-weight:750;color:#edf3ff;text-transform:none;letter-spacing:0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08)}
 #layers-list{overflow:visible}
 #layers-pop{scrollbar-width:thin;scrollbar-color:rgba(120,130,150,.5) transparent}
@@ -5687,6 +5688,10 @@ function toggleLayersPop(){
     }
     setTimeout(()=>{
       const closeLayers=e=>{
+        // The per-layer overflow menu is appended to <body>, so a click inside
+        // it looks like a click outside the panel. Without this, choosing any
+        // menu item closes the whole Layers panel behind it.
+        if(e.target.closest && e.target.closest('.lyr-more-pop')) return;
         if(!pop.contains(e.target) && !(e.target.closest && e.target.closest('#layers-btn'))){
           closeLayersPop();
         }
@@ -5904,24 +5909,15 @@ function renderLayers(){
     lock.onclick=e=>{e.stopPropagation();if(selActive&&layers[selLayer]===layer&&!layer.locked)clearSelection();layer.locked=!layer.locked;renderLayers();buildTL();};
     acts.appendChild(lock);
 
-    const dup=document.createElement('button');
-    dup.className='lyr-act';
-    dup.title='Duplicate layer';
-    dup.innerHTML=actionIcon.dup;
-    dup.onclick=e=>{e.stopPropagation();duplicateLayer(i);};
-    acts.appendChild(dup);
-
-    const del=document.createElement('button');
-    del.className='lyr-act danger';
-    del.title=layers.length<=1?'Cannot delete the last layer':'Delete layer';
-    del.innerHTML=actionIcon.del;
-    del.disabled=layers.length<=1;
-    del.onclick=e=>{
-      e.stopPropagation();
-      if(layers.length<=1){toast('Cannot delete the last layer');return;}
-      curLayer=i;delLayer();
-    };
-    acts.appendChild(del);
+    // Duplicate, merge, reorder, rename and delete live in the overflow menu.
+    // Visibility and lock stay inline because they are toggles you read at a
+    // glance and hit constantly; the rest are occasional or destructive.
+    const more=document.createElement('button');
+    more.className='lyr-act';
+    more.title='Layer options';
+    more.innerHTML='<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3.4" r="1.35"/><circle cx="8" cy="8" r="1.35"/><circle cx="8" cy="12.6" r="1.35"/></svg>';
+    more.onclick=e=>{e.stopPropagation();setCurrentLayer(i);showLayerMoreMenu(more,i);};
+    acts.appendChild(more);
 
     // Top row: grip + thumb + name + action buttons
     const topRow=document.createElement('div'); topRow.className='lyr-toprow';
@@ -6019,13 +6015,7 @@ function renderLayers(){
         item.style.visibility=''; grip.style.cursor='grab';
         const from=layerDragSrc, to=dropTo; layerDragSrc=null;
         if(to===from||to==null){ renderLayers(); return; }
-        saveUndoDelta({type:'layer-move', from:to, to:from}); // inverse of the move below
-        const moved=layers.splice(from,1)[0];
-        layers.splice(to,0,moved);
-        if(curLayer===from) curLayer=to;
-        else if(from<to&&curLayer>from&&curLayer<=to) curLayer--;
-        else if(from>to&&curLayer>=to&&curLayer<from) curLayer++;
-        renderLayers();renderFrame();buildTL();
+        moveLayer(from,to);
       };
       document.addEventListener('pointermove',onMove,true);
       document.addEventListener('pointerup',onUp,true);
@@ -6039,6 +6029,34 @@ function renderLayers(){
 function closeLayerMoreMenu(){
   document.querySelectorAll('.lyr-more-pop').forEach(el=>el.remove());
   document.removeEventListener('pointerdown',_layerMoreOutside,true);
+}
+
+// Reorder a layer. Extracted from the drag handler so the Move up / Move down
+// menu items reorder through exactly the same path, undo included, rather than
+// growing a second implementation that can drift.
+// layers[0] is the TOP of the stack, so "up" means a lower index.
+function moveLayer(from,to){
+  if(from===to||to==null||from==null) return;
+  if(to<0||to>=layers.length||from<0||from>=layers.length) return;
+  saveUndoDelta({type:'layer-move', from:to, to:from}); // inverse of the move below
+  const moved=layers.splice(from,1)[0];
+  layers.splice(to,0,moved);
+  if(curLayer===from) curLayer=to;
+  else if(from<to&&curLayer>from&&curLayer<=to) curLayer--;
+  else if(from>to&&curLayer>=to&&curLayer<from) curLayer++;
+  renderLayers();renderFrame();buildTL();
+}
+
+// Put a layer's name into edit mode from outside the row (the menu), reusing
+// the same inline editor double-tapping the name opens.
+function renameLayerAt(li){
+  setCurrentLayer(li);
+  renderLayers();
+  requestAnimationFrame(()=>{
+    const row=document.querySelector(`#layers-list .lyr-row[data-li="${li}"]`);
+    const name=row&&row.querySelector('.lyr-name');
+    if(name) name.dispatchEvent(new CustomEvent('start-rename',{bubbles:false}));
+  });
 }
 
 function _layerMoreOutside(e){
@@ -6056,7 +6074,11 @@ function showLayerMoreMenu(anchor,li){
     lock:'<svg viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
     dup:'<svg viewBox="0 0 16 16" fill="none"><rect x="5" y="2" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><rect x="2" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/></svg>',
     merge:'<svg viewBox="0 0 16 16" fill="none"><rect x="3" y="2" width="10" height="4" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M8 7v4M5.8 9.2L8 11.4l2.2-2.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="12.4" width="10" height="1.6" rx=".7" fill="currentColor"/></svg>',
-    del:'<svg viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6 4.5V3.2a.8.8 0 0 1 .8-.8h2.4a.8.8 0 0 1 .8.8v1.3M5 4.5l.5 8a1 1 0 0 0 1 .9h3a1 1 0 0 0 1-.9l.5-8" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    del:'<svg viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6 4.5V3.2a.8.8 0 0 1 .8-.8h2.4a.8.8 0 0 1 .8.8v1.3M5 4.5l.5 8a1 1 0 0 0 1 .9h3a1 1 0 0 0 1-.9l.5-8" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    rename:'<svg viewBox="0 0 16 16" fill="none"><path d="M9.6 3.2l3.2 3.2-6.7 6.7H2.9v-3.2l6.7-6.7z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M8.6 4.2l3.2 3.2" stroke="currentColor" stroke-width="1.35"/></svg>',
+    up:'<svg viewBox="0 0 16 16" fill="none"><path d="M8 12.5V3.5M4.4 7.1L8 3.5l3.6 3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    down:'<svg viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M4.4 8.9L8 12.5l3.6-3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    frame:'<svg viewBox="0 0 16 16" fill="none"><rect x="2.2" y="3.4" width="11.6" height="9.2" rx="1.4" stroke="currentColor" stroke-width="1.35"/><path d="M8 6.3v3.4M6.3 8h3.4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/></svg>'
   };
   const add=(label,icon,fn,cls='')=>{
     const b=document.createElement('button');
@@ -6065,13 +6087,30 @@ function showLayerMoreMenu(anchor,li){
     b.onclick=e=>{e.stopPropagation();closeLayerMoreMenu();fn();};
     pop.appendChild(b);
   };
+  // Never open or close on a separator, and never stack two.
+  const sep=()=>{
+    if(!pop.lastElementChild||pop.lastElementChild.className==='lyr-more-sep') return;
+    const d=document.createElement('div');d.className='lyr-more-sep';
+    pop.appendChild(d);
+  };
+  add('Rename',ico.rename,()=>renameLayerAt(li));
   add(layer.locked?'Unlock':'Lock',ico.lock,()=>{
     if(selActive&&layers[selLayer]===layer&&!layer.locked) clearSelection();
     layer.locked=!layer.locked;
     renderLayers();buildTL();
   });
-  add('Duplicate',ico.dup,()=>duplicateLayer(li));
+  sep();
+
+  // layers[0] is the top of the stack, so "up" is a lower index.
+  if(li>0) add('Move up',ico.up,()=>moveLayer(li,li-1));
+  if(li<layers.length-1) add('Move down',ico.down,()=>moveLayer(li,li+1));
+  if(li>0||li<layers.length-1) sep();
+
+  add('Duplicate layer',ico.dup,()=>duplicateLayer(li));
+  add('Duplicate frame here',ico.frame,()=>{ setCurrentLayer(li); dupFrameThisLayer(); });
   if(li<layers.length-1) add('Merge down',ico.merge,()=>mergeLayerDown(li));
+  sep();
+
   add('Delete',ico.del,()=>{
     if(layers.length<=1){toast('Cannot delete the last layer');return;}
     curLayer=li;delLayer();
