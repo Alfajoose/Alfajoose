@@ -75,6 +75,7 @@ jobs:
         run: |
           gh release delete frame-twelve-latest --yes --cleanup-tag || true
           gh release create frame-twelve-latest "${{ env.apk_path }}" \
+            --target "${{ github.sha }}" \
             --title "Frame Twelve debug APK" \
             --notes "Debug build from ${{ github.sha }}. Sideload on Android: allow installs from your browser, then open this APK." \
             --prerelease
