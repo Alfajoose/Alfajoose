@@ -3841,7 +3841,6 @@ function updateTLHighlight(prevFrame, nextFrame){
       // Reset
       cell.style.outline=''; cell.style.outlineOffset='';
       cell.style.borderRight='1px solid #252525';
-      cell.querySelector('.onion-bar')?.remove();
 
       // Apply
       if(isCur && li===curLayer){
@@ -3859,12 +3858,6 @@ function updateTLHighlight(prevFrame, nextFrame){
         cell.style.background='';
       }
 
-      if(isPrev||isNext){
-        const bar=document.createElement('div');
-        bar.className='onion-bar';
-        bar.style.cssText=`position:absolute;top:0;left:0;right:0;height:3px;background:${isPrev?getOnionColor('on-pc','#ff6b35'):getOnionColor('on-nc','#35d1ff')};opacity:0.8;z-index:3;pointer-events:none;border-radius:0 0 2px 2px;`;
-        cell.appendChild(bar);
-      }
 
       const fn=cell.querySelector('.tl-fn');
       if(fn){
@@ -6006,13 +5999,6 @@ function buildTL(){
         cell.appendChild(hb);
       }
 
-      // onion indicator bars on top edge
-      if(onionType==='prev'||onionType==='next'){
-        const bar=document.createElement('div');
-        bar.className='onion-bar';
-        bar.style.cssText=`position:absolute;top:0;left:0;right:0;height:3px;background:${onionType==='prev'?getOnionColor('on-pc','#ff6b35'):getOnionColor('on-nc','#35d1ff')};opacity:0.8;z-index:3;pointer-events:none;border-radius:0 0 2px 2px;`;
-        cell.appendChild(bar);
-      }
 
 
       // hover effect
