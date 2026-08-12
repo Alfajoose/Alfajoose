@@ -333,6 +333,9 @@ canvas{display:block}
 .ld-copy{min-width:0;display:flex;flex-direction:column;gap:2px;flex:1}
 .ld-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800}
 .ld-meta{font-size:10px;opacity:.55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld-more{width:30px;height:30px;flex-shrink:0;display:grid;place-items:center;border:0;border-radius:var(--r-sm);background:transparent;color:rgba(226,226,226,.62);cursor:pointer;padding:0}
+.ld-more:hover{background:rgba(255,255,255,.1);color:#fff}
+.ld-more svg{width:15px;height:15px}
 .tframes{display:flex;flex:1;height:100%}
 .fc{width:24px;height:100%;border-right:1px solid rgba(74,158,255,0.10);flex-shrink:0;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;transition:background 0.1s;background:rgba(5,12,24,0.34)}
 .fc:hover{background:rgba(74,158,255,0.10)}
@@ -6051,12 +6054,19 @@ function moveLayer(from,to){
 // the same inline editor double-tapping the name opens.
 function renameLayerAt(li){
   setCurrentLayer(li);
-  renderLayers();
-  requestAnimationFrame(()=>{
+  // The editor lives in a Layers panel row. Reached from the timeline
+  // dropdown that panel is usually closed, so open it first — otherwise
+  // there is no row to edit and Rename does nothing at all.
+  const pop=document.getElementById('layers-pop');
+  const wasOpen=pop&&pop.classList.contains('show');
+  if(!wasOpen) toggleLayersPop(); else renderLayers();
+  // toggleLayersPop arms its outside-click closer on a 50ms timer; focus the
+  // input after that so the first keystroke cannot dismiss the panel.
+  setTimeout(()=>{
     const row=document.querySelector(`#layers-list .lyr-row[data-li="${li}"]`);
     const name=row&&row.querySelector('.lyr-name');
     if(name) name.dispatchEvent(new CustomEvent('start-rename',{bubbles:false}));
-  });
+  },80);
 }
 
 function _layerMoreOutside(e){
@@ -7292,6 +7302,26 @@ function showLayerDropdown(anchor,trackIdx){
     copy.querySelector('.ld-meta').textContent=meta.length?meta.join(' · '):(li===curLayer?'Active layer':'Tap to show in timeline');
     it.appendChild(thumb);
     it.appendChild(copy);
+
+    // Same options as the Layers panel. On a phone this dropdown is how you
+    // reach layers, so rename/merge/reorder have to be here too.
+    const more=document.createElement('button');
+    more.className='ld-more';
+    more.title='Layer options';
+    more.innerHTML='<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3.4" r="1.35"/><circle cx="8" cy="8" r="1.35"/><circle cx="8" cy="12.6" r="1.35"/></svg>';
+    more.onclick=(()=>{const ll=li;return e=>{
+      e.stopPropagation();
+      setCurrentLayer(ll);
+      // Close the dropdown first, because the actions rebuild the layer list
+      // and would leave it showing stale rows behind the menu. Closing
+      // detaches this button though, so freeze its position now — measuring a
+      // detached node returns zeros and the menu jumps to the top-left corner.
+      const r=more.getBoundingClientRect();
+      closeLayerDropdown();
+      showLayerMoreMenu({getBoundingClientRect:()=>r},ll);
+    };})();
+    it.appendChild(more);
+
     it.onclick=(()=>{const ll=li;return e=>{e.stopPropagation();setCurrentLayer(ll);closeLayerDropdown();renderLayers();buildTL();renderOnion();renderFrame();};})();
     dd.appendChild(it);
   });
