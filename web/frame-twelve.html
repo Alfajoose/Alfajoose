@@ -333,9 +333,17 @@ canvas{display:block}
 .ld-copy{min-width:0;display:flex;flex-direction:column;gap:2px;flex:1}
 .ld-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800}
 .ld-meta{font-size:10px;opacity:.55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ld-more{width:30px;height:30px;flex-shrink:0;display:grid;place-items:center;border:0;border-radius:var(--r-sm);background:transparent;color:rgba(226,226,226,.62);cursor:pointer;padding:0}
-.ld-more:hover{background:rgba(255,255,255,.1);color:#fff}
-.ld-more svg{width:15px;height:15px}
+.ld-more,.ld-eye{width:30px;height:30px;flex-shrink:0;display:grid;place-items:center;border:0;border-radius:var(--r-sm);background:transparent;color:rgba(226,226,226,.62);cursor:pointer;padding:0}
+.ld-more:hover,.ld-eye:hover{background:rgba(255,255,255,.1);color:#fff}
+.ld-more svg,.ld-eye svg{width:15px;height:15px}
+.ld-eye.off{color:rgba(226,226,226,.3)}
+.ld-name-edit{width:100%;background:rgba(0,0,0,.35);border:1px solid var(--accent);border-radius:4px;color:var(--text);font:inherit;font-weight:800;padding:1px 5px;outline:none;min-width:0}
+.ld-op{display:flex;align-items:center;gap:8px;padding:2px 9px 7px 50px;margin-top:-2px}
+.ld-op input[type=range]{flex:1;accent-color:var(--accent);height:16px;min-width:0}
+.ld-op-val{font-size:10px;opacity:.6;width:32px;text-align:right;flex-shrink:0}
+.ld-add{width:100%;height:34px;margin-top:4px;display:flex;align-items:center;gap:9px;padding:0 10px;border:0;border-top:1px solid rgba(255,255,255,.09);border-radius:0 0 var(--r-sm) var(--r-sm);background:transparent;color:var(--text);font-family:inherit;font-size:12px;font-weight:750;cursor:pointer;text-align:left}
+.ld-add:hover{background:rgba(255,255,255,.08)}
+.ld-add svg{width:15px;height:15px;color:rgba(226,226,226,.68);flex-shrink:0}
 .tframes{display:flex;flex:1;height:100%}
 .fc{width:24px;height:100%;border-right:1px solid rgba(74,158,255,0.10);flex-shrink:0;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;transition:background 0.1s;background:rgba(5,12,24,0.34)}
 .fc:hover{background:rgba(74,158,255,0.10)}
@@ -770,7 +778,6 @@ input::selection,textarea::selection{background:rgba(74,111,212,.85);color:#fff}
     <button class="ib" id="del-frame-btn" onclick="clearFrame()" title="Clear current frame" style="border:1px solid var(--b2);border-radius:3px;padding:2px 5px;color:var(--t3);display:inline-flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 10h8M8 3l1 1-5 5-2-2 4-4zM4 9L2 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div style="width:1px;height:16px;background:var(--b2);flex-shrink:0;margin:0 2px"></div>
     <button class="ib" id="onion-toggle-btn" onclick="toggleOnion()" title="Onion skin on/off" style="border:1px solid var(--b2);border-radius:3px;padding:2px 5px;color:var(--t2);display:inline-flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><ellipse cx="6" cy="9" rx="3.5" ry="2" stroke="currentColor" stroke-width="1.3"/><path d="M6 7V4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 6.5C2.5 5.5 2 4 3 3s2.5-1 3-0.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M8 6.5C9.5 5.5 10 4 9 3S6.5 2 6 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
-    <button class="ib" id="layers-btn" onclick="toggleLayersPop()" title="Layers" style="border:1px solid var(--b2);border-radius:3px;padding:2px 5px;color:var(--t2);display:inline-flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2.2l7.4 3.7L10 9.6 2.6 5.9 10 2.2z"/><path d="M3.2 9.1l6.8 3.4 6.8-3.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M3.2 12.7l6.8 3.4 6.8-3.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></button>
     <button class="ib" id="tl-more-btn" onclick="toggleTlMore(event)" title="More" style="border:1px solid var(--b2);border-radius:3px;padding:2px 5px;color:var(--t2);display:inline-flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="2.5" cy="6" r="1.1"/><circle cx="6" cy="6" r="1.1"/><circle cx="9.5" cy="6" r="1.1"/></svg></button>
     <div class="hdr-right">
       <span style="font-size:10px;color:var(--t2);white-space:nowrap" id="total-f">8 frames</span>
@@ -5673,20 +5680,17 @@ function toggleLayersPop(){
       const tlH=tl?tl.getBoundingClientRect().height:0;
       pop.style.bottom=(tlH+margin)+'px';
     }else{
-      // The button sits in the timeline header now, so the panel rises from
-      // it rather than flying out sideways the way it did off the tool rail.
       const r=btn.getBoundingClientRect();
       const popW=Math.min(304, window.innerWidth-24);
       pop.style.width=popW+'px';
       pop.style.right='';
-      const left=Math.max(margin,
-        Math.min(r.left, window.innerWidth-popW-margin));
+      let left=r.left-popW-20;
+      if(left<margin) left=Math.min(window.innerWidth-popW-margin, r.right+20);
+      left=Math.max(margin, Math.min(left, window.innerWidth-popW-margin));
       const ph=pop.offsetHeight||360;
-      let top=r.top-ph-10;
-      // Not enough headroom: drop below the button, then clamp on-screen.
-      if(top<margin) top=Math.min(r.bottom+10, window.innerHeight-ph-margin);
+      let top=Math.max(margin, Math.min(r.top, window.innerHeight-ph-margin));
       pop.style.left=left+'px';
-      pop.style.top=Math.max(margin, top)+'px';
+      pop.style.top=top+'px';
       pop.style.bottom='auto';
     }
     setTimeout(()=>{
@@ -6051,22 +6055,19 @@ function moveLayer(from,to){
 }
 
 // Put a layer's name into edit mode from outside the row (the menu), reusing
-// the same inline editor double-tapping the name opens.
+// the inline editor a double-tap on the name opens.
+// Choosing Rename closes the dropdown (the menu sits on top of it), so reopen
+// it and put that row straight into edit mode.
 function renameLayerAt(li){
   setCurrentLayer(li);
-  // The editor lives in a Layers panel row. Reached from the timeline
-  // dropdown that panel is usually closed, so open it first — otherwise
-  // there is no row to edit and Rename does nothing at all.
-  const pop=document.getElementById('layers-pop');
-  const wasOpen=pop&&pop.classList.contains('show');
-  if(!wasOpen) toggleLayersPop(); else renderLayers();
-  // toggleLayersPop arms its outside-click closer on a 50ms timer; focus the
-  // input after that so the first keystroke cannot dismiss the panel.
+  const dd=document.getElementById('layer-dropdown');
+  const anchor=dd._anchor||document.querySelector('.tlbl');
+  if(!anchor) return;
+  showLayerDropdown(anchor, li, true);
   setTimeout(()=>{
-    const row=document.querySelector(`#layers-list .lyr-row[data-li="${li}"]`);
-    const name=row&&row.querySelector('.lyr-name');
-    if(name) name.dispatchEvent(new CustomEvent('start-rename',{bubbles:false}));
-  },80);
+    const row=dd.querySelectorAll('.ld-item')[li];
+    if(row&&row._startRename) row._startRename();
+  },40);
 }
 
 function _layerMoreOutside(e){
@@ -7274,10 +7275,13 @@ function setCurrentLayer(li){
   if(li!==curLayer && selActive) clearSelection();
   curLayer=li;
 }
-function showLayerDropdown(anchor,trackIdx){
+// keepOpen re-renders in place after an edit. Without it the same-anchor
+// toggle below would read the refresh as a second tap and close the dropdown.
+function showLayerDropdown(anchor,trackIdx,keepOpen){
   const dd=document.getElementById('layer-dropdown');
+  if(!anchor) return;
   // toggle off if already open from same anchor
-  if(dd.classList.contains('show') && dd._anchor===anchor){ closeLayerDropdown(); return; }
+  if(!keepOpen && dd.classList.contains('show') && dd._anchor===anchor){ closeLayerDropdown(); return; }
   dd._anchor=anchor;
   dd.innerHTML='';
   layers.forEach((layer,li)=>{
@@ -7298,10 +7302,50 @@ function showLayerDropdown(anchor,trackIdx){
     const copy=document.createElement('span');
     copy.className='ld-copy';
     copy.innerHTML='<span class="ld-name"></span><span class="ld-meta"></span>';
-    copy.querySelector('.ld-name').textContent=layer.name;
+    const nameEl=copy.querySelector('.ld-name');
+    nameEl.textContent=layer.name;
     copy.querySelector('.ld-meta').textContent=meta.length?meta.join(' · '):(li===curLayer?'Active layer':'Tap to show in timeline');
+
+    // Inline rename, the same gesture the old panel row used.
+    const startRename=()=>{
+      const inp=document.createElement('input');
+      inp.className='ld-name-edit'; inp.value=layer.name;
+      nameEl.replaceWith(inp); inp.focus(); inp.select();
+      let done=false;
+      const commit=()=>{
+        if(done) return; done=true;
+        const v=inp.value.trim(); if(v) layer.name=v;
+        buildTL(); renderLayers();
+        showLayerDropdown(dd._anchor||anchor, curLayer, true);
+      };
+      inp.onblur=commit;
+      inp.onkeydown=ev=>{
+        ev.stopPropagation();
+        if(ev.key==='Enter') inp.blur();
+        if(ev.key==='Escape'){ inp.value=layer.name; inp.blur(); }
+      };
+      inp.onclick=ev=>ev.stopPropagation();
+    };
+    nameEl.ondblclick=e=>{e.stopPropagation();startRename();};
+    it._startRename=startRename;
+
     it.appendChild(thumb);
     it.appendChild(copy);
+
+    // Visibility, the one control worth a dedicated tap rather than a menu trip.
+    const eye=document.createElement('button');
+    eye.className='ld-eye'+(layer.visible?'':' off');
+    eye.title=layer.visible?'Hide layer':'Show layer';
+    eye.innerHTML=layer.visible
+      ?'<svg viewBox="0 0 16 16" fill="none"><path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>'
+      :'<svg viewBox="0 0 16 16" fill="none"><path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.4" opacity=".45"/><path d="M3 13L13 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+    eye.onclick=(()=>{const ll=li;return e=>{
+      e.stopPropagation();
+      layers[ll].visible=!layers[ll].visible;
+      renderFrame(); renderLayers(); buildTL();
+      showLayerDropdown(dd._anchor||anchor, curLayer, true);
+    };})();
+    it.appendChild(eye);
 
     // Same options as the Layers panel. On a phone this dropdown is how you
     // reach layers, so rename/merge/reorder have to be here too.
@@ -7324,7 +7368,42 @@ function showLayerDropdown(anchor,trackIdx){
 
     it.onclick=(()=>{const ll=li;return e=>{e.stopPropagation();setCurrentLayer(ll);closeLayerDropdown();renderLayers();buildTL();renderOnion();renderFrame();};})();
     dd.appendChild(it);
+
+    // Opacity for the active layer only — a slider on every row would make
+    // the list unusable on a phone.
+    if(li===curLayer){
+      const op=document.createElement('div'); op.className='ld-op';
+      op.onclick=e=>e.stopPropagation();
+      const sl=document.createElement('input');
+      sl.type='range'; sl.min='0'; sl.max='100'; sl.step='1';
+      sl.value=Math.round((layer.opacity??1)*100);
+      const val=document.createElement('span'); val.className='ld-op-val';
+      val.textContent=sl.value+'%';
+      let raf=null;
+      sl.oninput=e=>{
+        const v=+e.target.value;
+        val.textContent=v+'%';
+        layers[li].opacity=v/100;
+        if(raf) cancelAnimationFrame(raf);
+        raf=requestAnimationFrame(()=>{raf=null;renderFrame();});
+      };
+      sl.onchange=()=>{renderLayers();buildTL();};
+      op.appendChild(sl); op.appendChild(val);
+      dd.appendChild(op);
+    }
   });
+
+  // Add layer lived in the old panel header; without it the dropdown could
+  // manage layers but never create one.
+  const addRow=document.createElement('button');
+  addRow.className='ld-add';
+  addRow.innerHTML='<svg viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Add layer</span>';
+  addRow.onclick=e=>{
+    e.stopPropagation();
+    addLayer();
+    showLayerDropdown(dd._anchor||anchor, curLayer, true);
+  };
+  dd.appendChild(addRow);
   // position near the anchored label
   dd.classList.add('show');
   const r=anchor.getBoundingClientRect();
@@ -9118,7 +9197,6 @@ renderStartupRecent();
 const TIPS={
   'undo-btn':     {name:'Undo',          desc:'Undo the last action',              key:'Ctrl+Z'},
   'redo-btn':     {name:'Redo',          desc:'Redo the last undone action',       key:'Ctrl+Y'},
-  'layers-btn':   {name:'Layers',        desc:'Open the layers panel',             key:null},
   'tr-grp-draw':  {name:'Draw',          desc:'Draw smooth fixed-width strokes', key:'P'},
   'tr-grp-line':  {name:'Line',          desc:'Line, curve and dotted modes',      key:'L'},
   'tr-grp-shape': {name:'Shape',         desc:'Rectangle, ellipse and triangle',   key:'R'},
