@@ -239,41 +239,9 @@ canvas{display:block}
 /* LAYERS POPOVER */
 .ib{width:26px;height:26px;display:inline-grid;place-items:center;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);color:var(--t2);cursor:pointer;font-size:11px;padding:0;border-radius:var(--r-sm)}
 .ib:hover{color:var(--text);background:rgba(255,255,255,.085)}
-#layers-pop{display:none;position:fixed;width:304px;max-height:min(70vh,520px);overflow-y:auto;background:rgba(31,33,37,.92);border:1px solid rgba(255,255,255,.11);border-radius:var(--r-card);z-index:460;padding:0;box-shadow:0 16px 38px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.06);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
-#layers-pop.show{display:block}
-@media(max-width:640px){#layers-pop{width:min(288px,calc(100vw - 16px));left:auto!important;right:8px;top:auto!important;bottom:8px;max-height:min(46vh,380px)}}
 .tl-more-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;background:none;border:none;color:var(--text);font-size:12px;font-family:inherit;cursor:pointer;border-radius:var(--r-sm);text-align:left}
 .tl-more-item:hover{background:var(--s3)}
 .tl-more-item svg{flex-shrink:0;color:var(--t2)}
-.lyr-row{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.075);cursor:pointer;position:relative}
-.lyr-row:last-child{border-bottom:none}
-.lyr-row:hover{background:rgba(255,255,255,.04)}
-.lyr-row.active{background:rgba(45,82,184,.16)}
-.lyr-row.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
-.lyr-grip{font-size:15px;color:#666;cursor:grab;flex-shrink:0;line-height:1;user-select:none;touch-action:none;padding:0 1px}
-.lyr-thumb{width:48px;height:36px;flex-shrink:0;border-radius:var(--r-sm);overflow:hidden;border:1px solid rgba(255,255,255,.14);background:linear-gradient(45deg,#3a3a3a 25%,transparent 25%,transparent 75%,#3a3a3a 75%),linear-gradient(45deg,#3a3a3a 25%,#2c2c2c 25%,#2c2c2c 75%,#3a3a3a 75%);background-size:10px 10px;background-position:0 0,5px 5px}
-.lyr-thumb canvas{width:100%;height:100%;display:block}
-.lyr-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
-.lyr-name{font-size:12px;color:var(--text);font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:text}
-.lyr-op-row{display:flex;align-items:center;gap:7px;margin:5px 1px 0 22px;padding-top:5px;border-top:1px solid rgba(255,255,255,.07)}
-.lyr-toprow{display:flex;align-items:center;gap:6px;width:100%}
-.lyr-op-ico{font-size:12px;color:var(--t3);flex-shrink:0;line-height:1}
-.lyr-op-slider{flex:1;min-width:0;height:22px;accent-color:var(--accent);cursor:pointer;touch-action:none}
-.lyr-op-val{font-size:9.5px;color:rgba(244,246,251,.74);min-width:34px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;font-weight:750}
-.lyr-row.active .lyr-name{color:#fff}
-.lyr-name-edit{font-size:12px;background:#1a1a1a;color:#e2e2e2;border:1px solid var(--accent);border-radius:4px;padding:1px 4px;width:100%;outline:none}
-.lyr-oprow{display:flex;align-items:center;gap:6px}
-.lyr-op{flex:1;min-width:0;accent-color:var(--accent);height:14px}
-.lyr-opv{font-size:10px;color:var(--t2);min-width:32px;text-align:right;font-variant-numeric:tabular-nums}
-.lyr-blend{background:var(--s3);color:var(--t2);border:1px solid var(--b2);border-radius:4px;font-size:9px;padding:1px 3px;width:100%;cursor:pointer}
-.lyr-acts{display:flex;flex-direction:row;gap:5px;flex-shrink:0}
-.lyr-act{width:25px;height:25px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.095);border-radius:var(--r-sm);background:rgba(255,255,255,.045);color:rgba(226,226,226,.58);cursor:pointer;transition:all .1s;padding:0}
-.lyr-act svg{width:15px;height:15px}
-.lyr-act:hover{color:var(--text);background:rgba(255,255,255,.085)}
-.lyr-act.off{color:#555}
-.lyr-act.on{color:var(--accent);border-color:var(--accent);background:rgba(45,82,184,.12)}
-.lyr-act.danger:hover{color:#ff7777;border-color:rgba(255,90,90,.35);background:rgba(255,70,70,.10)}
-.lyr-act:disabled{opacity:.32;cursor:not-allowed}
 .lyr-more-pop{position:fixed;display:none;z-index:490;min-width:156px;padding:5px;background:rgba(28,30,34,.98);border:1px solid rgba(255,255,255,.12);border-radius:var(--r-card);box-shadow:0 16px 36px rgba(0,0,0,.42);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 .lyr-more-pop.show{display:block}
 .lyr-more-item{width:100%;height:34px;display:flex;align-items:center;gap:9px;padding:0 10px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--text);font-family:inherit;font-size:12px;font-weight:750;cursor:pointer;text-align:left}
@@ -281,13 +249,6 @@ canvas{display:block}
 .lyr-more-item.danger{color:#ff7777}
 .lyr-more-item svg{width:15px;height:15px;color:rgba(226,226,226,.68);flex-shrink:0}
 .lyr-more-sep{height:1px;margin:4px 6px;background:rgba(255,255,255,.09)}
-.lhdr{height:38px;padding:0 10px 0 12px;font-size:11px;font-weight:750;color:#edf3ff;text-transform:none;letter-spacing:0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08)}
-#layers-list{overflow:visible}
-#layers-pop{scrollbar-width:thin;scrollbar-color:rgba(120,130,150,.5) transparent}
-#layers-pop::-webkit-scrollbar{width:6px}
-#layers-pop::-webkit-scrollbar-track{background:transparent;margin:4px 0}
-#layers-pop::-webkit-scrollbar-thumb{background:rgba(120,130,150,.45);border-radius:10px;border:1px solid transparent;background-clip:padding-box}
-#layers-pop::-webkit-scrollbar-thumb:hover{background:rgba(120,130,150,.7);background-clip:padding-box}
 .layer-item{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;cursor:pointer;margin:1px 4px;border:1px solid transparent}
 .layer-item:hover{background:var(--s3)}
 .layer-item.active{background:var(--s2);border-color:var(--accent)}
@@ -337,6 +298,11 @@ canvas{display:block}
 .ld-more:hover,.ld-eye:hover{background:rgba(255,255,255,.1);color:#fff}
 .ld-more svg,.ld-eye svg{width:15px;height:15px}
 .ld-eye.off{color:rgba(226,226,226,.3)}
+.ld-grip{width:16px;flex-shrink:0;display:grid;place-items:center;color:rgba(226,226,226,.34);cursor:grab;touch-action:none}
+.ld-grip:active{cursor:grabbing}
+.ld-grip svg{width:10px;height:14px}
+.ld-item.ld-drop-above{box-shadow:inset 0 2px 0 var(--accent)}
+.ld-item.ld-drop-below{box-shadow:inset 0 -2px 0 var(--accent)}
 .ld-name-edit{width:100%;background:rgba(0,0,0,.35);border:1px solid var(--accent);border-radius:4px;color:var(--text);font:inherit;font-weight:800;padding:1px 5px;outline:none;min-width:0}
 .ld-op{display:flex;align-items:center;gap:8px;padding:2px 9px 7px 50px;margin-top:-2px}
 .ld-op input[type=range]{flex:1;accent-color:var(--accent);height:16px;min-width:0}
@@ -406,7 +372,7 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
   --ctl-on:rgba(45,82,184,.94);
   --ctl-radius:999px;
 }
-.floating-panel,#topbar,#toolrail,#prop-bar,#layers-pop,#layer-dropdown,#tl-more-menu,#fps-menu,#onion-panel.onion-pop,#modal,.recent-menu{
+.floating-panel,#topbar,#toolrail,#prop-bar,#layer-dropdown,#tl-more-menu,#fps-menu,#onion-panel.onion-pop,#modal,.recent-menu{
   border-color:var(--glass-line)!important;
   background:var(--glass)!important;
   box-shadow:0 18px 42px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.08)!important;
@@ -416,13 +382,13 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
 #topbar,#toolrail{border-radius:16px!important;padding:5px!important}
 #topbar{gap:4px}
 #toolrail{gap:3px;width:58px;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-width:none!important}
-.tb,.ib,.tr-btn,.lyr-act,.pb-btn,.sfb,.btype,.dash-btn,.cap-btn,.create-chip,.export-card,.recent-menu button,.tl-more-item,.lyr-more-item,.fps-opt{
+.tb,.ib,.tr-btn,.pb-btn,.sfb,.btype,.dash-btn,.cap-btn,.create-chip,.export-card,.recent-menu button,.tl-more-item,.lyr-more-item,.fps-opt{
   border-radius:var(--ctl-radius)!important;
   border-color:rgba(255,255,255,.10)!important;
   transition:background .14s,border-color .14s,color .14s,box-shadow .14s,transform .08s!important;
 }
-.tb,.ib,.lyr-act,.pb-btn,.sfb,.btype,.dash-btn,.cap-btn,.create-chip,.fps-opt{background:var(--ctl-bg)}
-.tb:hover,.ib:hover,.tr-btn:hover,.lyr-act:hover,.pb-btn:hover,.sfb:hover,.btype:hover,.dash-btn:hover,.cap-btn:hover,.create-chip:hover,.fps-opt:hover{
+.tb,.ib,.pb-btn,.sfb,.btype,.dash-btn,.cap-btn,.create-chip,.fps-opt{background:var(--ctl-bg)}
+.tb:hover,.ib:hover,.tr-btn:hover,.pb-btn:hover,.sfb:hover,.btype:hover,.dash-btn:hover,.cap-btn:hover,.create-chip:hover,.fps-opt:hover{
   background:var(--ctl-hover)!important;
   border-color:rgba(126,166,255,.26)!important;
   color:#fff!important;
@@ -468,7 +434,7 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
 }
 .tr-sep,.tsep{background:rgba(255,255,255,.12)!important}
 #prop-bar{border-radius:16px!important;width:174px}
-#prop-bar-header,.lhdr{
+#prop-bar-header{
   min-height:36px;
   border-bottom-color:rgba(255,255,255,.08)!important;
   background:rgba(255,255,255,.035)!important;
@@ -690,14 +656,6 @@ input::selection,textarea::selection{background:rgba(74,111,212,.85);color:#fff}
 </div>
 
 <div id="layer-dropdown"></div>
-<div id="layers-pop">
-  <div class="lhdr">Layers
-    <span style="display:flex;gap:3px">
-      <button class="ib" onclick="addLayer()" title="Add layer" style="display:inline-flex;align-items:center;justify-content:center;padding:2px 5px"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
-    </span>
-  </div>
-  <div id="layers-list"></div>
-</div>
 
 <!-- PROP PANEL (contextual tool popover) -->
 <div id="prop-bar" class="floating-panel collapsed">
@@ -5512,16 +5470,6 @@ function positionPropBar(t=tool){
   bar.style.top=top+'px';
 }
 
-function closeLayersPop(){
-  const pop=document.getElementById('layers-pop');
-  const btn=document.getElementById('layers-btn');
-  if(pop) pop.classList.remove('show');
-  if(btn) btn.classList.remove('on');
-  if(toggleLayersPop._closer){
-    document.removeEventListener('pointerdown', toggleLayersPop._closer, true);
-    toggleLayersPop._closer=null;
-  }
-}
 
 function collapseProp(){
   const bar=document.getElementById('prop-bar');
@@ -5538,7 +5486,7 @@ function togglePropBar(){
 }
 
 function expandPropBar(){
-  closeLayersPop();
+  closeLayerDropdown();
   const bar=document.getElementById('prop-bar');
   const btn=document.getElementById('prop-bar-collapse');
   if(!bar) return;
@@ -5646,68 +5594,13 @@ function prepareCanvasAction(){
   hideAllSubPickers();
   closeTlMore();
   closeFpsMenu();
-  closeLayersPop();
+  closeLayerDropdown();
   const onionPanel=document.getElementById('onion-panel');
   if(onionPanel){onionPanel.style.display='none';}
   document.querySelectorAll('.color-popover,.cp-popover,[data-color-popover]').forEach(el=>el.remove());
   collapseProp();
 }
 
-function toggleLayersPop(){
-  const pop=document.getElementById('layers-pop');
-  const btn=document.getElementById('layers-btn');
-  if(!pop || !btn) return;
-  const showing=pop.classList.contains('show');
-  closeLayersPop();
-  if(showing) return;
-  deactivateRuler();
-  collapseProp();
-  document.querySelectorAll('.color-popover,.cp-popover,[data-color-popover]').forEach(el=>el.remove());
-  pop.classList.add('show');
-  btn.classList.add('on');
-  {
-    renderLayers();
-    const margin=8;
-    if(window.innerWidth<=640){
-      // Compact popover pinned to the right edge — leaves the canvas visible
-      // instead of covering it edge-to-edge.
-      pop.style.width=Math.min(288, window.innerWidth-16)+'px';
-      pop.style.left='auto';
-      pop.style.right=margin+'px';
-      pop.style.top='auto';
-      // Sit just above the timeline instead of on top of it.
-      const tl=document.getElementById('bottom');
-      const tlH=tl?tl.getBoundingClientRect().height:0;
-      pop.style.bottom=(tlH+margin)+'px';
-    }else{
-      const r=btn.getBoundingClientRect();
-      const popW=Math.min(304, window.innerWidth-24);
-      pop.style.width=popW+'px';
-      pop.style.right='';
-      let left=r.left-popW-20;
-      if(left<margin) left=Math.min(window.innerWidth-popW-margin, r.right+20);
-      left=Math.max(margin, Math.min(left, window.innerWidth-popW-margin));
-      const ph=pop.offsetHeight||360;
-      let top=Math.max(margin, Math.min(r.top, window.innerHeight-ph-margin));
-      pop.style.left=left+'px';
-      pop.style.top=top+'px';
-      pop.style.bottom='auto';
-    }
-    setTimeout(()=>{
-      const closeLayers=e=>{
-        // The per-layer overflow menu is appended to <body>, so a click inside
-        // it looks like a click outside the panel. Without this, choosing any
-        // menu item closes the whole Layers panel behind it.
-        if(e.target.closest && e.target.closest('.lyr-more-pop')) return;
-        if(!pop.contains(e.target) && !(e.target.closest && e.target.closest('#layers-btn'))){
-          closeLayersPop();
-        }
-      };
-      toggleLayersPop._closer=closeLayers;
-      document.addEventListener('pointerdown', closeLayers, true);
-    },50);
-  }
-}
 
 function toggleOnion(){
   onionOn=!onionOn;
@@ -5844,193 +5737,17 @@ function updateThumb(){
   _thumbRAF=requestAnimationFrame(()=>{ _thumbRAF=null; renderLayers(); });
 }
 
+// The Layers panel is gone; layer UI is the timeline dropdown. Call sites all
+// mean "the layer list changed, repaint it", so this refreshes the dropdown
+// when it is open and does nothing when it is not.
+let _renderingLayers=false;
 function renderLayers(){
-  const list=document.getElementById('layers-list');list.innerHTML='';
-  layers.forEach((layer,i)=>{
-    const item=document.createElement('div');item.className='lyr-row'+(i===curLayer?' active':'');
-    item.dataset.li=i;
-
-    // drag grip
-    const grip=document.createElement('span');grip.className='lyr-grip';grip.innerHTML='<svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"><circle cx="3" cy="2.5" r="1.2"/><circle cx="7" cy="2.5" r="1.2"/><circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="3" cy="11.5" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg>';
-
-    // big thumbnail
-    const thumb=document.createElement('div');thumb.className='lyr-thumb';
-    const tc=document.createElement('canvas');tc.width=92;tc.height=68;
-    const tctx=tc.getContext('2d');tctx.fillStyle='#fff';tctx.fillRect(0,0,tc.width,tc.height);tctx.drawImage(layer.frames[curFrame].canvas,0,0,tc.width,tc.height);
-    thumb.appendChild(tc);
-
-    // middle: name only
-    const mid=document.createElement('div');mid.className='lyr-mid';
-    const nm=document.createElement('div');nm.className='lyr-name';nm.textContent=layer.name;
-    const startRename=()=>{
-      const inp=document.createElement('input');inp.value=layer.name;inp.className='lyr-name-edit';
-      nm.replaceWith(inp);inp.focus();inp.select();
-      const commit=()=>{const v=inp.value.trim();if(v)layer.name=v;renderLayers();buildTL()};
-      inp.onblur=commit;
-      inp.onkeydown=ev=>{if(ev.key==='Enter')inp.blur();if(ev.key==='Escape'){inp.value=layer.name;inp.blur();}ev.stopPropagation();};
-    };
-    let _lastRenameTap=0;
-    const maybeRename=e=>{
-      if(e.target.closest&&e.target.closest('button,input,.lyr-op-row,.lyr-grip')) return false;
-      const now=Date.now();
-      if(now-_lastRenameTap<320){
-        e.preventDefault(); e.stopPropagation();
-        item._skipNextClick=true;
-        _lastRenameTap=0;
-        setCurrentLayer(i);
-        renderLayers();
-        requestAnimationFrame(()=>{
-          const row=list.querySelector(`.lyr-row[data-li="${i}"]`);
-          const name=row?.querySelector('.lyr-name');
-          if(name) name.dispatchEvent(new CustomEvent('start-rename',{bubbles:false}));
-        });
-        return true;
-      }
-      _lastRenameTap=now;
-      return false;
-    };
-    nm.addEventListener('start-rename',startRename);
-    nm.ondblclick=e=>{ e.stopPropagation(); startRename(); };
-    mid.appendChild(nm);
-
-    // right: core layer actions stay visible for fast mobile editing
-    const acts=document.createElement('div');acts.className='lyr-acts';
-    const actionIcon={
-      lock:'<svg viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
-      unlock:'<svg viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 7V5.8a3 3 0 0 1 5.1-2.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
-      dup:'<svg viewBox="0 0 16 16" fill="none"><rect x="5" y="2" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><rect x="2" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/></svg>',
-      del:'<svg viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6 4.5V3.2a.8.8 0 0 1 .8-.8h2.4a.8.8 0 0 1 .8.8v1.3M5 4.5l.5 8a1 1 0 0 0 1 .9h3a1 1 0 0 0 1-.9l.5-8" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    };
-    const eye=document.createElement('button');eye.className='lyr-act'+(layer.visible?'':' off');eye.title='Visibility';
-    const eyeSVG=v=>v
-      ?'<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>'
-      :'<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.4" opacity="0.45"/><path d="M3 13L13 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
-    eye.innerHTML=eyeSVG(layer.visible);
-    eye.onclick=e=>{e.stopPropagation();layer.visible=!layer.visible;eye.className='lyr-act'+(layer.visible?'':' off');eye.innerHTML=eyeSVG(layer.visible);renderFrame()};
-    acts.appendChild(eye);
-
-    const lock=document.createElement('button');
-    lock.className='lyr-act'+(layer.locked?' on':'');
-    lock.title=layer.locked?'Unlock layer':'Lock layer';
-    lock.innerHTML=layer.locked?actionIcon.lock:actionIcon.unlock;
-    lock.onclick=e=>{e.stopPropagation();if(selActive&&layers[selLayer]===layer&&!layer.locked)clearSelection();layer.locked=!layer.locked;renderLayers();buildTL();};
-    acts.appendChild(lock);
-
-    // Duplicate, merge, reorder, rename and delete live in the overflow menu.
-    // Visibility and lock stay inline because they are toggles you read at a
-    // glance and hit constantly; the rest are occasional or destructive.
-    const more=document.createElement('button');
-    more.className='lyr-act';
-    more.title='Layer options';
-    more.innerHTML='<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3.4" r="1.35"/><circle cx="8" cy="8" r="1.35"/><circle cx="8" cy="12.6" r="1.35"/></svg>';
-    more.onclick=e=>{e.stopPropagation();setCurrentLayer(i);showLayerMoreMenu(more,i);};
-    acts.appendChild(more);
-
-    // Top row: grip + thumb + name + action buttons
-    const topRow=document.createElement('div'); topRow.className='lyr-toprow';
-    topRow.appendChild(grip);topRow.appendChild(thumb);topRow.appendChild(mid);topRow.appendChild(acts);
-
-    // Full-width opacity row below (so the slider isn't squeezed by the button count)
-    const opRow=document.createElement('div'); opRow.className='lyr-op-row';
-    const opLabel=document.createElement('span'); opLabel.className='lyr-op-ico'; opLabel.title='Layer opacity'; opLabel.innerHTML='<svg width="11" height="11" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M6 1.4a4.6 4.6 0 010 9.2z" fill="currentColor"/></svg>';
-    const opSlider=document.createElement('input');
-    opSlider.type='range'; opSlider.min='0'; opSlider.max='100'; opSlider.step='1';
-    opSlider.value=Math.round((layer.opacity??1)*100);
-    opSlider.className='lyr-op-slider';
-    const opVal=document.createElement('span'); opVal.className='lyr-op-val'; opVal.textContent=opSlider.value+'%';
-    let _opRaf=null;
-    opSlider.oninput=e=>{
-      e.stopPropagation();
-      layer.opacity=(+opSlider.value)/100;
-      opVal.textContent=opSlider.value+'%';
-      // Coalesce the expensive recomposite to at most once per animation frame so
-      // the slider tracks the finger smoothly instead of stalling on every input.
-      if(_opRaf===null){
-        _opRaf=requestAnimationFrame(()=>{ _opRaf=null; renderFrame(); });
-      }
-    };
-    // Update the thumbnail only once when the drag finishes (it's not needed live).
-    const opCommit=()=>{ if(_opRaf!==null){cancelAnimationFrame(_opRaf);_opRaf=null;} renderFrame(); updateThumb(); };
-    opSlider.addEventListener('change',opCommit);
-    opSlider.onpointerdown=e=>e.stopPropagation();
-    opSlider.onpointermove=e=>e.stopPropagation();
-    opSlider.onclick=e=>e.stopPropagation();
-    opSlider.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
-    opSlider.addEventListener('touchmove',e=>e.stopPropagation(),{passive:true});
-    opRow.onclick=e=>e.stopPropagation();
-    opRow.appendChild(opLabel); opRow.appendChild(opSlider); opRow.appendChild(opVal);
-
-    item.appendChild(topRow);
-    if(i===curLayer) item.appendChild(opRow);
-    item.addEventListener('pointerup',e=>{ maybeRename(e); });
-    item.onclick=()=>{
-      if(item._skipNextClick){item._skipNextClick=false;return;}
-      setCurrentLayer(i);renderLayers();buildTL();
-    };
-
-    // -- drag reorder via grip: the row lifts and follows the finger, and the
-    //    other rows slide open a gap where it will land. Feels physical instead
-    //    of snapping. --
-    grip.addEventListener('pointerdown',e=>{
-      e.stopPropagation(); e.preventDefault();
-      grip.setPointerCapture(e.pointerId);
-      layerDragSrc=i;
-      const rows=[...list.querySelectorAll('.lyr-row')];
-      const rect=item.getBoundingClientRect();
-      const grabDY=e.clientY-rect.top;
-      // Ghost: a floating clone of the row that tracks the finger.
-      const ghost=item.cloneNode(true);
-      ghost.style.cssText='position:fixed;left:'+rect.left+'px;top:'+rect.top+'px;width:'+rect.width+'px;height:'+rect.height+'px;z-index:1200;pointer-events:none;opacity:.96;transform:scale(1.03);box-shadow:0 12px 30px rgba(0,0,0,.5);border-radius:var(--r-ctl);margin:0';
-      document.body.appendChild(ghost);
-      item.style.visibility='hidden';
-      rows.forEach(r=>{ r.style.transition='transform .16s ease'; });
-      grip.style.cursor='grabbing';
-      if(navigator.vibrate) navigator.vibrate(8);
-      let dropTo=i;
-      const H=rect.height + parseFloat(getComputedStyle(item).marginBottom||0) + parseFloat(getComputedStyle(item).marginTop||0);
-
-      const onMove=ev=>{
-        if(layerDragSrc===null) return;
-        ghost.style.top=(ev.clientY-grabDY)+'px';
-        // Which slot is the finger over? Compare against each row's midpoint.
-        const midY=ev.clientY;
-        let idx=rows.length-1;
-        for(let k=0;k<rows.length;k++){
-          const rr=rows[k].getBoundingClientRect();
-          if(midY <= rr.bottom){ idx=k; break; } // finger anywhere over row k targets slot k
-        }
-        // DOM order matches layer order (top row = layer 0), so DOM index IS the
-        // target layer index.
-        dropTo=idx;
-        // Slide the intervening rows to open a gap where the dragged row will land.
-        rows.forEach(r=>{
-          const li=+r.dataset.li;
-          if(li===layerDragSrc){ r.style.transform=''; return; }
-          let shift=0;
-          if(dropTo>layerDragSrc && li>layerDragSrc && li<=dropTo) shift=-H; // rows above slide up
-          else if(dropTo<layerDragSrc && li<layerDragSrc && li>=dropTo) shift=H; // rows below slide down
-          r.style.transform = shift? 'translateY('+shift+'px)' : '';
-        });
-      };
-      const onUp=ev=>{
-        if(layerDragSrc===null) return;
-        document.removeEventListener('pointermove',onMove,true);
-        document.removeEventListener('pointerup',onUp,true);
-        document.removeEventListener('pointercancel',onUp,true);
-        ghost.remove();
-        rows.forEach(r=>{ r.style.transition=''; r.style.transform=''; });
-        item.style.visibility=''; grip.style.cursor='grab';
-        const from=layerDragSrc, to=dropTo; layerDragSrc=null;
-        if(to===from||to==null){ renderLayers(); return; }
-        moveLayer(from,to);
-      };
-      document.addEventListener('pointermove',onMove,true);
-      document.addEventListener('pointerup',onUp,true);
-      document.addEventListener('pointercancel',onUp,true);
-    });
-
-    list.appendChild(item);
-  });
+  if(_renderingLayers) return;
+  const dd=document.getElementById('layer-dropdown');
+  if(!dd||!dd.classList.contains('show')||!dd._anchor) return;
+  _renderingLayers=true;
+  try{ showLayerDropdown(dd._anchor, curLayer, true); }
+  finally{ _renderingLayers=false; }
 }
 
 function closeLayerMoreMenu(){
@@ -7290,6 +7007,45 @@ function showLayerDropdown(anchor,trackIdx,keepOpen){
     const meta=[];
     if(!layer.visible) meta.push('hidden');
     if(layer.locked) meta.push('locked');
+    // Drag handle. Reordering hangs off a grip rather than the row itself so
+    // it cannot fight tap-to-switch on a touchscreen.
+    const grip=document.createElement('span');
+    grip.className='ld-grip';
+    grip.title='Drag to reorder';
+    grip.innerHTML='<svg viewBox="0 0 10 14" fill="currentColor"><circle cx="3" cy="2.5" r="1.2"/><circle cx="7" cy="2.5" r="1.2"/><circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="3" cy="11.5" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg>';
+    grip.onclick=e=>e.stopPropagation();
+    grip.addEventListener('pointerdown',(()=>{const from=li;return ev=>{
+      ev.preventDefault(); ev.stopPropagation();
+      const rows=[...dd.querySelectorAll('.ld-item')];
+      let to=from;
+      const clear=()=>rows.forEach(r=>r.classList.remove('ld-drop-above','ld-drop-below'));
+      const onMove=e2=>{
+        const y=e2.clientY;
+        to=rows.length-1;
+        for(let k=0;k<rows.length;k++){
+          const r=rows[k].getBoundingClientRect();
+          if(y < r.top + r.height/2){ to=k; break; }
+        }
+        clear();
+        if(to!==from){
+          const marker=rows[Math.min(to,rows.length-1)];
+          marker.classList.add(to>from?'ld-drop-below':'ld-drop-above');
+        }
+      };
+      const onUp=()=>{
+        document.removeEventListener('pointermove',onMove,true);
+        document.removeEventListener('pointerup',onUp,true);
+        document.removeEventListener('pointercancel',onUp,true);
+        clear();
+        if(to!==from) moveLayer(from,to);
+        showLayerDropdown(dd._anchor||anchor, curLayer, true);
+      };
+      document.addEventListener('pointermove',onMove,true);
+      document.addEventListener('pointerup',onUp,true);
+      document.addEventListener('pointercancel',onUp,true);
+    };})());
+    it.appendChild(grip);
+
     const thumb=document.createElement('span');
     thumb.className='ld-thumb';
     thumb.style.borderLeft='3px solid '+(layer.color??LAYER_COLORS[0]);
