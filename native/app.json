@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Frame Twelve",
+    "slug": "frame-twelve",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0f1115",
+    "primaryColor": "#2d52b8",
+    "androidStatusBar": {
+      "hidden": true,
+      "translucent": true
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.alfajoose.frametwelve"
+    },
+    "android": {
+      "package": "com.alfajoose.frametwelve",
+      "softwareKeyboardLayoutMode": "pan",
+      "adaptiveIcon": {
+        "backgroundColor": "#0f1115",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
