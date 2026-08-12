@@ -5983,12 +5983,9 @@ function buildTL(){
         cell.style.background=onionTint;
       }
 
-      // layer color stripe at bottom
+      // Layer colour is carried by the frame dot alone; the full-width stripe
+      // along the bottom of every cell said the same thing far more loudly.
       const lcolor=layer.color??LAYER_COLORS[0];
-      const stripe=document.createElement('div');
-      stripe.className='layer-color-stripe';
-      stripe.style.cssText=`position:absolute;bottom:0;left:0;right:0;height:3px;background:${lcolor};opacity:0.7;z-index:2;pointer-events:none;`;
-      cell.appendChild(stripe);
 
       // thumbnail
       const frameHasContent=hasC(layer.frames[f]);
