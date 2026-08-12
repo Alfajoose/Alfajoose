@@ -5808,11 +5808,20 @@ function showLayerMoreMenu(anchor,li){
     down:'<svg viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M4.4 8.9L8 12.5l3.6-3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     frame:'<svg viewBox="0 0 16 16" fill="none"><rect x="2.2" y="3.4" width="11.6" height="9.2" rx="1.4" stroke="currentColor" stroke-width="1.35"/><path d="M8 6.3v3.4M6.3 8h3.4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/></svg>'
   };
-  const add=(label,icon,fn,cls='')=>{
+  const add=(label,icon,fn,cls='',ownsRepaint=false)=>{
     const b=document.createElement('button');
     b.className='lyr-more-item '+cls;
     b.innerHTML=icon+'<span>'+label+'</span>';
-    b.onclick=e=>{e.stopPropagation();closeLayerMoreMenu();fn();};
+    b.onclick=e=>{
+      e.stopPropagation();
+      closeLayerMoreMenu();
+      fn();
+      // Most layer ops repaint themselves, but not all — dupFrameThisLayer
+      // does not. Refresh so the dropdown left open behind the menu is never
+      // stale. Rename is exempt: it re-renders and focuses its own input,
+      // which a second repaint would throw away.
+      if(!ownsRepaint) renderLayers();
+    };
     pop.appendChild(b);
   };
   // Never open or close on a separator, and never stack two.
@@ -5821,7 +5830,7 @@ function showLayerMoreMenu(anchor,li){
     const d=document.createElement('div');d.className='lyr-more-sep';
     pop.appendChild(d);
   };
-  add('Rename',ico.rename,()=>renameLayerAt(li));
+  add('Rename',ico.rename,()=>renameLayerAt(li),'',true);
   add(layer.locked?'Unlock':'Lock',ico.lock,()=>{
     if(selActive&&layers[selLayer]===layer&&!layer.locked) clearSelection();
     layer.locked=!layer.locked;
@@ -7117,13 +7126,10 @@ function showLayerDropdown(anchor,trackIdx,keepOpen){
     more.onclick=(()=>{const ll=li;return e=>{
       e.stopPropagation();
       setCurrentLayer(ll);
-      // Close the dropdown first, because the actions rebuild the layer list
-      // and would leave it showing stale rows behind the menu. Closing
-      // detaches this button though, so freeze its position now — measuring a
-      // detached node returns zeros and the menu jumps to the top-left corner.
-      const r=more.getBoundingClientRect();
-      closeLayerDropdown();
-      showLayerMoreMenu({getBoundingClientRect:()=>r},ll);
+      // The dropdown stays open underneath: the menu sits above it (z-index
+      // 490 vs 470) and every action repaints the rows, so nothing goes stale.
+      renderLayers();
+      showLayerMoreMenu(more,ll);
     };})();
     it.appendChild(more);
 
@@ -7195,7 +7201,11 @@ function showLayerDropdown(anchor,trackIdx,keepOpen){
 function closeLayerDropdown(){const dd=document.getElementById('layer-dropdown');dd.classList.remove('show');dd._anchor=null;}
 function _closeLayerDropdownOutside(e){
   const dd=document.getElementById('layer-dropdown');
-  if(dd.contains(e.target)){ // keep listening while clicking inside
+  // The options menu is appended to <body>, so a tap inside it is technically
+  // outside the dropdown. Without this the dropdown closes the moment you
+  // choose anything from the menu it opened.
+  const inMenu=e.target.closest&&e.target.closest('.lyr-more-pop');
+  if(inMenu||dd.contains(e.target)){ // keep listening while clicking inside
     document.addEventListener('pointerdown',_closeLayerDropdownOutside,{once:true});
     return;
   }
