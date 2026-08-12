@@ -9172,6 +9172,107 @@ function importImage(file){
   if(document.readyState !== 'loading') wire();
   else document.addEventListener('DOMContentLoaded', wire);
 })();
+// -- ARTIFACT DOWNLOAD BRIDGE -------------------------------------------------
+// Published as a claude.ai Artifact the page runs sandboxed, where clicking an
+// <a download> does nothing at all — every export would silently produce
+// nothing. When the viewer grants the downloads capability, route those clicks
+// through it instead. Inert in a plain browser and in the Capacitor build,
+// where window.claude does not exist and the anchor (or the native bridge)
+// handles saving.
+(function(){
+  var api = window.claude && window.claude.downloads;
+  if(!api || typeof api.save !== 'function') return;
+
+  // Allowlisted extensions. .keela is not among them, but the project format
+  // is JSON and the file picker already accepts .json, so it saves as that.
+  var ALLOWED = /\.(gif|png|jpe?g|webp|mp4|webm|txt|json|md)$/i;
+  function safeName(name){
+    var n = String(name || 'frame-twelve').trim() || 'frame-twelve';
+    if(/\.keela$/i.test(n)) n = n.replace(/\.keela$/i, '.json');
+    if(!ALLOWED.test(n)) n = n.replace(/\.[^.\/]*$/, '') + '.json';
+    return n;
+  }
+
+  // Recover the bytes behind an object URL, since the anchor only carries the
+  // URL while the runtime wants the data.
+  var blobs = new Map();
+  var create = URL.createObjectURL.bind(URL);
+  var revoke = URL.revokeObjectURL.bind(URL);
+  URL.createObjectURL = function(o){
+    var u = create(o);
+    if(o instanceof Blob) blobs.set(u, o);
+    return u;
+  };
+  URL.revokeObjectURL = function(u){
+    setTimeout(function(){ blobs.delete(u); }, 10000);
+    return revoke(u);
+  };
+
+  function explain(err){
+    switch(err && err.code){
+      case 'declined':              return null;   // viewer said no; stay quiet
+      case 'too_large':             return 'Too big to save (16 MB limit) — try fewer frames or a smaller scale';
+      case 'rate_limited':          return 'Too many saves at once — try again in a moment';
+      case 'rejected_extension':
+      case 'extension_not_enabled': return 'That file type cannot be saved here';
+      case 'bad_request':
+      case 'transform_error':       return 'Export produced nothing to save';
+      default:                      return 'Save failed';
+    }
+  }
+
+  // Only one prompt may be open at a time, and exporting a frame sequence
+  // fires one click per frame, so saves are queued rather than raced. A
+  // decline abandons the rest of that burst instead of asking per frame.
+  //
+  // The cutoff is a timestamp, not a counter: handle() resolves each href
+  // asynchronously, so an in-flight count keeps touching zero between frames
+  // and would re-arm mid-burst.
+  var BURST_MS = 3000;
+  var queue = Promise.resolve(), declinedAt = 0;
+
+  function enqueue(data, filename){
+    queue = queue.then(function(){
+      if(Date.now() - declinedAt < BURST_MS) return;   // same burst, already refused
+      return api.save({ filename: safeName(filename), data: data }).catch(function(err){
+        if(err && err.code === 'declined') declinedAt = Date.now();
+        var msg = explain(err);
+        if(msg && typeof toast === 'function') toast(msg);
+      });
+    });
+  }
+
+  function handle(href, name){
+    if(!href) return;
+    var known = blobs.get(href);
+    if(known){ enqueue(known, name); return; }
+    // data: and blob: URLs both resolve locally; no network involved.
+    fetch(href).then(function(r){ return r.blob(); })
+               .then(function(b){ enqueue(b, name); })
+               .catch(function(){
+                 if(typeof toast === 'function') toast('Export failed');
+               });
+  }
+
+  var nativeClick = HTMLElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function(){
+    if(this.hasAttribute && this.hasAttribute('download')){
+      handle(this.getAttribute('href') || '', this.getAttribute('download') || '');
+      return;
+    }
+    return nativeClick.apply(this, arguments);
+  };
+
+  document.addEventListener('click', function(ev){
+    var a = ev.target && ev.target.closest && ev.target.closest('a[download]');
+    if(a){
+      ev.preventDefault();
+      ev.stopPropagation();
+      handle(a.getAttribute('href') || '', a.getAttribute('download') || '');
+    }
+  }, true);
+})();
+
 </script>
 </body>
 </html>
