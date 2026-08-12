@@ -242,7 +242,7 @@ canvas{display:block}
 .tl-more-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;background:none;border:none;color:var(--text);font-size:12px;font-family:inherit;cursor:pointer;border-radius:var(--r-sm);text-align:left}
 .tl-more-item:hover{background:var(--s3)}
 .tl-more-item svg{flex-shrink:0;color:var(--t2)}
-.lyr-more-pop{position:fixed;display:none;z-index:490;min-width:156px;padding:5px;background:rgba(28,30,34,.98);border:1px solid rgba(255,255,255,.12);border-radius:var(--r-card);box-shadow:0 16px 36px rgba(0,0,0,.42);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.lyr-more-pop{position:fixed;display:none;z-index:490;min-width:156px;padding:5px;overflow-y:auto;background:rgba(28,30,34,.98);border:1px solid rgba(255,255,255,.12);border-radius:var(--r-card);box-shadow:0 16px 36px rgba(0,0,0,.42);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 .lyr-more-pop.show{display:block}
 .lyr-more-item{width:100%;height:34px;display:flex;align-items:center;gap:9px;padding:0 10px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--text);font-family:inherit;font-size:12px;font-weight:750;cursor:pointer;text-align:left}
 .lyr-more-item:hover{background:rgba(255,255,255,.08)}
@@ -5853,11 +5853,30 @@ function showLayerMoreMenu(anchor,li){
     curLayer=li;delLayer();
   },'danger');
   document.body.appendChild(pop);
+
+  // Anything that repaints the layer list replaces these rows, so an anchor
+  // captured beforehand may already be detached — and a detached node measures
+  // as zeros, which drops the menu in the top-left corner. Re-resolve it.
+  if(anchor&&anchor.isConnected===false){
+    anchor=document.querySelectorAll('#layer-dropdown .ld-more')[li]
+        || document.querySelector('.tlbl')
+        || anchor;
+  }
+
+  const M=8, G=6;
   const r=anchor.getBoundingClientRect();
-  const w=pop.offsetWidth||156,h=pop.offsetHeight||170;
-  let left=Math.min(window.innerWidth-w-8,Math.max(8,r.right-w));
-  let top=Math.min(window.innerHeight-h-8,Math.max(8,r.bottom+6));
-  if(top<r.bottom && r.top-h-6>8) top=r.top-h-6;
+  // The list is anchored to the bottom of the screen, so the menu usually has
+  // to open upward. Cap the height to the room available on whichever side is
+  // used, otherwise a long menu overshoots and gets clamped somewhere unrelated.
+  const spaceAbove=r.top-M-G, spaceBelow=window.innerHeight-r.bottom-M-G;
+  const above=spaceBelow<(pop.offsetHeight||170) && spaceAbove>spaceBelow;
+  pop.style.maxHeight=Math.max(140,
+    Math.min(above?spaceAbove:spaceBelow, Math.round(window.innerHeight*0.7)))+'px';
+
+  const w=pop.offsetWidth||156, h=pop.offsetHeight||170;
+  let left=Math.min(window.innerWidth-w-M, Math.max(M, r.right-w));
+  let top=above ? r.top-G-h : r.bottom+G;
+  top=Math.max(M, Math.min(top, window.innerHeight-h-M));
   pop.style.left=left+'px';
   pop.style.top=top+'px';
   setTimeout(()=>document.addEventListener('pointerdown',_layerMoreOutside,true),30);
@@ -7127,8 +7146,9 @@ function showLayerDropdown(anchor,trackIdx,keepOpen){
       e.stopPropagation();
       setCurrentLayer(ll);
       // The dropdown stays open underneath: the menu sits above it (z-index
-      // 490 vs 470) and every action repaints the rows, so nothing goes stale.
-      renderLayers();
+      // 490 vs 470) and each action repaints afterwards, so nothing goes
+      // stale. Do NOT repaint first — that rebuilds the rows and detaches
+      // this very button, leaving the menu nothing real to anchor to.
       showLayerMoreMenu(more,ll);
     };})();
     it.appendChild(more);
