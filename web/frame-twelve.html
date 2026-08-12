@@ -6996,7 +6996,12 @@ function setCurrentLayer(li){
 // toggle below would read the refresh as a second tap and close the dropdown.
 function showLayerDropdown(anchor,trackIdx,keepOpen){
   const dd=document.getElementById('layer-dropdown');
-  if(!anchor) return;
+  // buildTL() rebuilds the timeline and replaces the .tlbl label, so an anchor
+  // captured before an edit is detached by the time we re-render. Measuring a
+  // detached node returns zeros and the dropdown lands in the top-left corner
+  // instead of hugging the label — re-resolve it against the live one.
+  if(anchor&&!anchor.isConnected) anchor=document.querySelector('.tlbl')||anchor;
+  if(!anchor||!anchor.isConnected) return;
   // toggle off if already open from same anchor
   if(!keepOpen && dd.classList.contains('show') && dd._anchor===anchor){ closeLayerDropdown(); return; }
   dd._anchor=anchor;
@@ -7162,13 +7167,25 @@ function showLayerDropdown(anchor,trackIdx,keepOpen){
   dd.appendChild(addRow);
   // position near the anchored label
   dd.classList.add('show');
+  const MARGIN=8, GAP=4;
   const r=anchor.getBoundingClientRect();
+
+  // The label lives at the bottom of the screen, so prefer opening upward and
+  // cap the height to the space actually available. Without the cap a long
+  // layer list overshoots the top, gets clamped, and ends up floating far away
+  // from the control that opened it.
+  const spaceAbove=r.top-MARGIN-GAP;
+  const spaceBelow=window.innerHeight-r.bottom-MARGIN-GAP;
+  const above=spaceAbove>=spaceBelow;
+  dd.style.maxHeight=Math.max(120,
+    Math.min(above?spaceAbove:spaceBelow, Math.round(window.innerHeight*0.6), 360))+'px';
+
   const ddW=dd.offsetWidth||200, ddH=dd.offsetHeight||200;
-  let left=r.left, top=r.bottom+4;
-  if(left+ddW>window.innerWidth-8) left=window.innerWidth-ddW-8;
-  if(left<8) left=8;
-  if(top+ddH>window.innerHeight-8) top=r.top-ddH-4; // flip above if no room below
-  if(top<8) top=8;
+  let left=r.left;
+  if(left+ddW>window.innerWidth-MARGIN) left=window.innerWidth-ddW-MARGIN;
+  if(left<MARGIN) left=MARGIN;
+  let top=above ? r.top-GAP-ddH : r.bottom+GAP;
+  top=Math.max(MARGIN, Math.min(top, window.innerHeight-ddH-MARGIN));
   dd.style.left=left+'px';
   dd.style.top=top+'px';
   // scroll active item into view
