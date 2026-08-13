@@ -283,10 +283,8 @@ canvas{display:block}
     box-shadow:-10px 0 12px rgba(24,28,36,.92);
   }
 }
-@media(max-width:420px){
-  #tlhdr{gap:4px!important}
-  #tlhdr #fctr{display:none}
-}
+@media(max-width:420px){ #tlhdr #fctr{display:none} }
+ #play-btn{padding:6px 10px!important} #tlhdr{padding:5px!important} }
 #tlhdr .ib{width:28px!important;height:28px!important;border-radius:999px!important;padding:0!important;background:rgba(255,255,255,.055)!important;border-color:rgba(255,255,255,.11)!important;color:rgba(232,238,248,.78)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.055);transition:background .12s,border-color .12s,color .12s,box-shadow .12s,transform .08s}
 #tlhdr .ib:hover{background:rgba(255,255,255,.085)!important;border-color:rgba(126,166,255,.28)!important;color:#fff!important}
 #tlhdr .ib:active{transform:scale(.94)}
@@ -630,6 +628,13 @@ input::selection,textarea::selection{background:rgba(74,111,212,.85);color:#fff}
    28px buttons and an 8px frame number are fine with a mouse and far too
    small with a thumb; the row scrolls, so width is cheaper than precision. */
 @media(max-width:560px){
+  /* The row is 414px of content; below that it clips. Reclaim it from spacing
+     and from the fps chip rather than from the touch targets. */
+  #tlhdr{gap:4px!important;padding:6px!important}
+  #tlhdr .hdr-right{padding-left:5px!important}
+  .fps-btn{min-width:0!important;padding:0 7px 0 10px!important;gap:4px}
+  .fps-unit{display:none}
+
   #tlhdr .ib{width:36px!important;height:36px!important}
   #tlhdr .ib svg{width:15px!important;height:15px!important}
   #play-btn{min-height:36px!important;padding:6px 14px!important;font-size:12px!important}
@@ -637,6 +642,14 @@ input::selection,textarea::selection{background:rgba(74,111,212,.85);color:#fff}
   #scrubber-row{height:40px!important}
   .tlbl{width:88px!important;font-size:11px!important;gap:5px}
   .tlbl svg{width:11px;height:11px}
+}
+/* At 320 the row still spills. The play glyph alone is unambiguous, and
+   dropping the word is a better trade than shrinking a touch target. Must come
+   after the block above, which sets padding with !important. */
+@media(max-width:340px){
+  #plbl{display:none}
+  #play-btn{padding:6px 10px!important}
+  #tlhdr{padding:4px!important;gap:3px!important}
 }
 </style>
 </head>
@@ -5625,7 +5638,9 @@ function syncFpsControl(){
   const label=document.getElementById('fps-btn-label');
   const menu=document.getElementById('fps-menu');
   const val=+(sel?.value||12);
-  if(label) label.textContent=val+'fps';
+  // Split so the unit can be hidden on a narrow screen: as one text node the
+  // chip is 76px wide and pushes the timeline buttons off the edge.
+  if(label) label.innerHTML=val+'<span class="fps-unit">fps</span>';
   if(menu) menu.querySelectorAll('.fps-opt').forEach(btn=>btn.classList.toggle('on', +btn.dataset.fps===val));
 }
 function setTimelineFps(v){
