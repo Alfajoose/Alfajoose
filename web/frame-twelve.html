@@ -7,6 +7,51 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
 <title>FRAME TWELVE</title>
 <style>
+/* ==========================================================================
+   STYLESHEET STRUCTURE — read this before adding rules
+   --------------------------------------------------------------------------
+   Order matters here and is deliberate. Top to bottom:
+
+     1. reset and :root tokens
+     2. per-component rules, grouped by the section comments below
+     3. PRODUCT POLISH — the shared control language, which intentionally
+        supersedes the component rules above it
+     4. body.focus-mode state rules
+     5. RESPONSIVE — every width-dependent rule, at the very end, one block
+        per breakpoint, widest first (see the banner down there)
+
+   Put a new rule in the section it belongs to. Do NOT append responsive rules
+   at the bottom of an unrelated section: that is how this file ended up with
+   640px appearing three times and 560px twice, scattered from top to bottom,
+   so narrow-screen rules sat above base rules and lost to them.
+
+   ON !important
+   -------------
+   There were 124. An audit dropped each rule's flags in a live page and
+   re-read computed styles across six states (desktop, phone, phone+focus,
+   320px, landscape, phone+modal); 67 changed nothing and were removed. The
+   57 that remain are load-bearing for one of exactly two reasons:
+
+     (a) JS writes the property as an INLINE STYLE — buildTL() and friends set
+         .style.background, .style.padding and so on, and only !important
+         outranks an inline declaration. Permanent; do not remove.
+         Rules: #tlhdr .ib, #play-btn (all three copies), the floating-panel
+         group, the #tlscroll/#tl/#scrubber-row/.track/.tlbl background,
+         body.focus-mode #fctr, body.focus-mode #audio-track-row.
+
+     (b) SPECIFICITY — the polish layer uses class selectors while the
+         component rules it supersedes use ID selectors, and the responsive
+         blocks are outranked by body.focus-mode. Fixable properly by merging
+         the polish declarations into the component rules rather than layering
+         over them; until then the flag stands in for that work.
+         Rules: the .tb/.ib/... control groups, #topbar+#toolrail padding,
+         #bottom, #tlhdr, #scrubber-row, and their 560px/340px counterparts.
+
+   Before adding a new !important, check it is actually needed:
+       node scripts/audit-important.js
+   It prints every rule carrying the flag and whether dropping it changes
+   anything. If it reports your rule as inert, you did not need it.
+   ========================================================================== */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0e0e0e;--surface:#161616;--s2:#1e1e1e;--s3:#262626;--s4:#303030;
@@ -112,27 +157,6 @@ body.focus-mode #focus-color{display:block}
 #tool-badge{position:absolute;left:calc(18px + env(safe-area-inset-left,0px));top:calc(14px + env(safe-area-inset-top,0px));z-index:120;display:flex;align-items:center;gap:7px;min-height:28px;padding:0 10px;border:1px solid rgba(255,255,255,0.08);border-radius:var(--r-ctl);background:rgba(22,22,22,0.62);color:var(--text);font-size:11px;font-weight:700;letter-spacing:0.2px;pointer-events:none;opacity:0.82;box-shadow:0 8px 22px rgba(0,0,0,0.24)}
 #tool-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
 #tool-badge-desc{font-size:9px;font-weight:500;color:var(--t2);letter-spacing:0;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media (max-width: 640px){
-  /* Keep the status-bar inset from the base rule — this is the phone branch,
-     which is exactly where a notch or punch-hole exists. */
-  #topbar{top:calc(16px + env(safe-area-inset-top,0px));left:50%;max-width:calc(100vw - 106px);gap:2px;padding:4px 6px;overflow:hidden}
-  #topbar .panel-grip{width:18px;min-width:18px;opacity:.38}
-  #topbar .tb{min-width:28px;width:28px;height:28px;padding:0;border-radius:var(--r-sm)}
-  #topbar .tb svg{width:14px;height:14px}
-  #topbar .tsep{height:20px;margin:0 3px}
-  #topbar #save-btn,#topbar #load-btn,#topbar #export-btn{display:none}
-  #topbar #rotate-info{display:none}
-  #topbar #zoom-info{min-width:38px;font-size:10px}
-  #tool-badge{top:18px;left:20px;max-width:74px;min-height:28px;padding:0 8px;gap:5px;overflow:hidden}
-  #tool-badge-desc{display:none}
-  #tool-badge-name{max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #canvas-area{padding-top:72px}
-}
-@media (max-width: 430px){
-  #topbar{left:50%;right:auto;transform:translateX(-50%);max-width:calc(100vw - 16px);justify-content:center}
-  body.focus-mode #topbar{transform:translate(-50%,-8px)}
-  #tool-badge{display:none}
-}
 body.focus-mode #topbar,body.focus-mode #toolrail,body.focus-mode #prop-bar{opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity .16s ease,transform .16s ease}
 body.focus-mode #topbar{transform:translate(-50%,-8px)}
 body.focus-mode #focus-exit-btn{display:flex}
@@ -157,7 +181,6 @@ canvas{display:block}
 .pb-row{display:grid;grid-template-columns:minmax(38px,max-content) minmax(0,1fr) 34px;align-items:center;gap:6px;min-height:24px;padding:2px 0}
 #prop-bar .pb-row>select,#prop-bar .pb-row>input[type=checkbox]{grid-column:2/4;justify-self:end}
 #prop-bar .pb-row>select{justify-self:stretch}
-@media(max-width:640px){#prop-bar{width:max-content;min-width:150px;max-width:min(218px,calc(100vw - 112px));right:auto!important;bottom:auto!important;max-height:min(54vh,330px)}}
 .pb-lbl{font-size:8px;color:rgba(232,236,245,.56);white-space:nowrap;flex-shrink:0;text-transform:uppercase;letter-spacing:0;font-weight:780;overflow:hidden;text-overflow:ellipsis}
 .pb-slider{min-width:0;accent-color:var(--accent);height:14px;cursor:pointer}
 .pb-val{font-size:9.5px;color:#f4f6fb;min-width:31px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;font-weight:780;cursor:pointer;border-radius:6px;padding:2px 1px}
@@ -265,31 +288,10 @@ canvas{display:block}
 #tlhdr::-webkit-scrollbar{display:none}
 #tlhdr>*{flex-shrink:0}
 #tlhdr .hdr-right{margin-left:auto;display:flex;align-items:center;gap:5px;padding-left:8px}
-/* On a narrow screen the header overflows and the fps control is pushed off
-   the right edge — unreachable, because an auto margin sits outside the
-   scrollable extent. The frame count is the redundant part: the timeline
-   below already shows the frames. */
-/* On a phone this row is wider than the screen, and the fps control sits at
-   the far end of the overflow — off the right edge and easy to miss entirely.
-   Dropping the two redundant readouts (both restate what the timeline
-   immediately below already shows) buys most of the room back, and pinning the
-   group to the visible edge guarantees the control is reachable at any width
-   rather than only at the ones measured here. */
-@media(max-width:560px){
-  #tlhdr .hdr-right #total-f{display:none}
-  #tlhdr .hdr-right{
-    position:sticky;
-    right:0;
-    background:rgba(24,28,36,.96);
-    padding-left:8px;
-    box-shadow:-10px 0 12px rgba(24,28,36,.92);
-  }
-}
-@media(max-width:420px){ #tlhdr #fctr{display:none} }
 #tlhdr .ib{width:28px!important;height:28px!important;border-radius:999px!important;padding:0!important;background:rgba(255,255,255,.055)!important;border-color:rgba(255,255,255,.11)!important;color:rgba(232,238,248,.78)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.055);transition:background .12s,border-color .12s,color .12s,box-shadow .12s,transform .08s}
-#tlhdr .ib:hover{background:rgba(255,255,255,.085)!important;border-color:rgba(126,166,255,.28)!important;color:#fff!important}
+#tlhdr .ib:hover{background:rgba(255,255,255,.085);border-color:rgba(126,166,255,.28);color:#fff}
 #tlhdr .ib:active{transform:scale(.94)}
-#tlhdr .ib.on,#onion-toggle-btn.on{background:rgba(55,99,220,.9)!important;border-color:rgba(146,174,255,.48)!important;color:#fff!important;box-shadow:0 6px 16px rgba(45,82,184,.26),inset 0 1px 0 rgba(255,255,255,.12)!important}
+#tlhdr .ib.on,#onion-toggle-btn.on{background:rgba(55,99,220,.9);border-color:rgba(146,174,255,.48);color:#fff;box-shadow:0 6px 16px rgba(45,82,184,.26),inset 0 1px 0 rgba(255,255,255,.12)}
 #play-btn{border-radius:999px!important;min-height:28px!important;padding:4px 12px!important;box-shadow:0 7px 18px rgba(45,82,184,.22)}
 #tlscroll{overflow-x:auto;overflow-y:auto;max-height:200px;min-height:52px;flex-shrink:0;background:#0d1422}
 #tl{display:flex;flex-direction:column;min-width:100%;position:relative;background:#0d1422}
@@ -350,11 +352,11 @@ canvas{display:block}
 
 body.focus-mode #bottom{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(880px,calc(100vw - 32px));max-height:min(34vh,230px);border:1px solid rgba(255,255,255,.13);border-radius:16px;overflow:hidden;background:rgba(21,24,30,.74);box-shadow:0 18px 46px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.09);backdrop-filter:blur(22px) saturate(1.18);-webkit-backdrop-filter:blur(22px) saturate(1.18);z-index:260}
 body.focus-mode #tlhdr{padding:8px 10px;gap:7px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);box-shadow:inset 0 -1px 0 rgba(0,0,0,.18)}
-body.focus-mode #tlhdr .ib,body.focus-mode #play-btn{min-height:28px!important;border-radius:999px!important}
-body.focus-mode #tlhdr .ib{background:rgba(255,255,255,.045)!important;border-color:rgba(255,255,255,.12)!important;color:rgba(232,238,248,.86)!important}
-body.focus-mode #tlhdr .ib.on{background:rgba(55,99,220,.82)!important;border-color:rgba(146,174,255,.45)!important;color:#fff!important;box-shadow:0 6px 16px rgba(45,82,184,.24)}
-body.focus-mode #tl-more-btn.on{background:rgba(74,158,255,.95)!important;border-color:rgba(255,255,255,.68)!important;color:#fff!important;box-shadow:0 0 0 2px rgba(74,158,255,.24),0 8px 20px rgba(45,82,184,.38)!important}
-body.focus-mode #play-btn{padding:4px 12px!important;box-shadow:0 7px 18px rgba(45,82,184,.26)}
+body.focus-mode #tlhdr .ib,body.focus-mode #play-btn{min-height:28px;border-radius:999px}
+body.focus-mode #tlhdr .ib{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.12);color:rgba(232,238,248,.86)}
+body.focus-mode #tlhdr .ib.on{background:rgba(55,99,220,.82);border-color:rgba(146,174,255,.45);color:#fff;box-shadow:0 6px 16px rgba(45,82,184,.24)}
+body.focus-mode #tl-more-btn.on{background:rgba(74,158,255,.95);border-color:rgba(255,255,255,.68);color:#fff;box-shadow:0 0 0 2px rgba(74,158,255,.24),0 8px 20px rgba(45,82,184,.38)}
+body.focus-mode #play-btn{padding:4px 12px;box-shadow:0 7px 18px rgba(45,82,184,.26)}
 body.focus-mode #fctr{color:#7fb0ff!important}
 body.focus-mode #tlhdr .hdr-right{gap:8px}
 body.focus-mode .fps-btn{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);color:#eef3ff;padding:0 9px 0 12px!important}
@@ -375,13 +377,6 @@ body.focus-mode .fn{color:rgba(205,217,238,.42)}
 body.focus-mode .addfc{width:40px;background:rgba(45,82,184,.10);border-left:1px solid rgba(255,255,255,.08);color:#7fb0ff}
 body.focus-mode .addfc:hover{background:rgba(74,158,255,.18);color:#d9e7ff}
 body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;border-top:1px solid rgba(255,255,255,.08)!important}
-@media(max-width:640px){
-  body.focus-mode #canvas-area{padding-bottom:clamp(126px,24vh,194px)}
-  body.focus-mode #bottom{left:8px;right:8px;bottom:8px;width:auto;transform:none;border-radius:var(--r-card);max-height:36vh}
-  body.focus-mode #tlhdr{padding:7px 8px}
-  body.focus-mode #tlhdr .hdr-right #total-f{display:none}  /* not every span: .fps-wrap is one too */
-  body.focus-mode #tlscroll{max-height:24vh}
-}
 
 /* PRODUCT POLISH: shared control language */
 :root{
@@ -401,7 +396,7 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
 }
 #topbar,#toolrail{border-radius:16px!important;padding:5px!important}
 #topbar{gap:4px}
-#toolrail{gap:3px;width:58px;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-width:none!important}
+#toolrail{gap:3px;width:58px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
 .tb,.ib,.tr-btn,.pb-btn,.sfb,.btype,.dash-btn,.cap-btn,.create-chip,.export-card,.recent-menu button,.tl-more-item,.lyr-more-item,.fps-opt{
   border-radius:var(--ctl-radius)!important;
   border-color:rgba(255,255,255,.10)!important;
@@ -409,9 +404,9 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
 }
 .tb,.ib,.pb-btn,.sfb,.btype,.dash-btn,.cap-btn,.create-chip,.fps-opt{background:var(--ctl-bg)}
 .tb:hover,.ib:hover,.tr-btn:hover,.pb-btn:hover,.sfb:hover,.btype:hover,.dash-btn:hover,.cap-btn:hover,.create-chip:hover,.fps-opt:hover{
-  background:var(--ctl-hover)!important;
-  border-color:rgba(126,166,255,.26)!important;
-  color:#fff!important;
+  background:var(--ctl-hover);
+  border-color:rgba(126,166,255,.26);
+  color:#fff;
 }
 .tb.on,.tr-btn.on,.ib.on,.pb-btn.on,.sfb.on,.btype.on,.dash-btn.on,.cap-btn.on,.create-chip.on,.fps-opt.on,#onion-toggle-btn.on{
   background:var(--ctl-on)!important;
@@ -419,19 +414,19 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
   color:#fff!important;
   box-shadow:0 8px 18px rgba(45,82,184,.28),inset 0 1px 0 rgba(255,255,255,.12)!important;
 }
-.tr-btn{width:48px;height:42px;border-radius:14px!important}
-.tr-btn.on{box-shadow:0 8px 18px rgba(45,82,184,.32),inset 0 0 0 1px rgba(255,255,255,.34)!important}
+.tr-btn{width:48px;height:42px;border-radius:14px}
+.tr-btn.on{box-shadow:0 8px 18px rgba(45,82,184,.32),inset 0 0 0 1px rgba(255,255,255,.34)}
 /* Ruler is a MODIFIER, not a peer tool. When engaged it gets an outlined,
    hollow-tinted look (accent ring + faint fill) instead of the solid active
    fill, so it never competes visually with the actually-active drawing tool. */
 #tr-ruler.on{
-  background:rgba(45,130,255,.14)!important;
-  border-color:var(--accent)!important;
-  color:var(--accent)!important;
-  box-shadow:inset 0 0 0 1.5px var(--accent), 0 0 14px rgba(45,130,255,.25)!important;
+  background:rgba(45,130,255,.14);
+  border-color:var(--accent);
+  color:var(--accent);
+  box-shadow:inset 0 0 0 1.5px var(--accent), 0 0 14px rgba(45,130,255,.25);
 }
-#tr-ruler.on .tr-btn-label{color:var(--accent)!important}
-#tr-ruler.on::after{display:none!important} /* suppress the solid-tool accent bar */
+#tr-ruler.on .tr-btn-label{color:var(--accent)}
+#tr-ruler.on::after{display:none} /* suppress the solid-tool accent bar */
 /* A small "GUIDE" tag under the ruler icon while active makes the mode explicit. */
 #tr-ruler.on::before{
   content:"ON";
@@ -452,21 +447,21 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
   transform:translateX(-50%);
   opacity:.9;
 }
-.tr-sep,.tsep{background:rgba(255,255,255,.12)!important}
-#prop-bar{border-radius:16px!important;width:174px}
+.tr-sep,.tsep{background:rgba(255,255,255,.12)}
+#prop-bar{border-radius:16px;width:174px}
 #prop-bar-header{
   min-height:36px;
-  border-bottom-color:rgba(255,255,255,.08)!important;
-  background:rgba(255,255,255,.035)!important;
+  border-bottom-color:rgba(255,255,255,.08);
+  background:rgba(255,255,255,.035);
 }
 .pb-btns,.pb-btngroup .pb-btns,.pb-stack .pb-btns{
-  border-radius:999px!important;
-  padding:3px!important;
-  background:rgba(0,0,0,.16)!important;
+  border-radius:999px;
+  padding:3px;
+  background:rgba(0,0,0,.16);
 }
 .pb-btn{height:26px}
-.pb-btns.pb-btns-grid{border-radius:15px!important;row-gap:3px}
-.pb-btns.pb-btns-grid .pb-btn{border-radius:12px!important}
+.pb-btns.pb-btns-grid{border-radius:15px;row-gap:3px}
+.pb-btns.pb-btns-grid .pb-btn{border-radius:12px}
 #bottom{
   background:rgba(18,21,28,.96)!important;
   border-top-color:rgba(255,255,255,.08)!important;
@@ -481,18 +476,18 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
 #tlscroll,#tl,#scrubber-row,.track,.tlbl{background-color:#0f1726!important}
 #scrubber-row{border-bottom-color:rgba(74,158,255,.18)!important}
 .fc{
-  border-right-color:rgba(255,255,255,.06)!important;
-  background:rgba(255,255,255,.025)!important;
+  border-right-color:rgba(255,255,255,.06);
+  background:rgba(255,255,255,.025);
 }
-.fc.cur{background:rgba(74,158,255,.14)!important}
+.fc.cur{background:rgba(74,158,255,.14)}
 .fc.hc .dot{box-shadow:0 0 10px rgba(168,255,61,.38)}
-.recent-card{border-radius:16px!important}
-.recent-card::before,.recent-card::after{border-radius:16px!important}
+.recent-card{border-radius:16px}
+.recent-card::before,.recent-card::after{border-radius:16px}
 .recent-info{border-radius:0 0 16px 16px}
 
 
 /* SELECTION */
-.ruler-type-btn.on{border-color:var(--accent)!important;color:var(--accent)!important;background:rgba(45,82,184,0.12)!important}
+.ruler-type-btn.on{border-color:var(--accent);color:var(--accent);background:rgba(45,82,184,0.12)}
 #sel-overlay{position:absolute;top:0;left:0;pointer-events:none;z-index:10}
 #ruler-cv{position:absolute;pointer-events:none;z-index:11}
 #ruler-cv.ruler-drawing{opacity:.28}
@@ -551,7 +546,6 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
 .recent-card::before,.recent-card::after{content:'';position:absolute;inset:7px 7px -7px 7px;border-radius:var(--r-card);background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.055);z-index:-1;transform:rotate(-2deg);pointer-events:none}
 .recent-card::after{inset:11px 13px -12px 13px;background:rgba(74,158,255,0.055);border-color:rgba(74,158,255,0.08);transform:rotate(2.4deg)}
 .recent-card:active{transform:scale(.975)}
-@media(hover:hover){.recent-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 20px 38px rgba(0,0,0,0.42),0 0 0 1px var(--accent)}}
 .recent-card.dragging{opacity:.58;transform:scale(.96);box-shadow:0 0 0 2px rgba(74,158,255,.45),0 16px 34px rgba(0,0,0,.38)}
 .recent-card.drop-target{border-color:var(--accent);box-shadow:0 0 0 2px rgba(74,158,255,.56),0 20px 38px rgba(0,0,0,.42)}
 .recent-card.group-card .recent-thumb-wrap{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:5px;background:linear-gradient(145deg,#f5f6f2,#dfe5ee)}
@@ -603,50 +597,112 @@ input::selection,textarea::selection{background:rgba(74,111,212,.85);color:#fff}
 .create-custom{display:none;margin-top:9px;background:rgba(255,255,255,0.035);border:1px solid var(--b2);border-radius:var(--r-ctl);padding:9px}
 .create-custom-row{display:flex;align-items:center;gap:8px}
 .create-custom input{width:100%;min-width:0;background:var(--s3);border:1px solid var(--b2);border-radius:var(--r-ctl);color:var(--text);padding:9px 10px;font-size:12px;font-weight:850;outline:none}
-@media (max-width:620px){#startup-inner{padding:24px 18px 92px;gap:16px}#startup-logo{width:46px;height:46px}#startup-title{font-size:21px}#startup-sub{font-size:11px}#startup-brand{gap:11px}#startup-recent-list{grid-template-columns:repeat(2,minmax(124px,1fr));gap:10px}.recent-name{font-size:12px}}
 /* -- NEW FEATURES -- */
 
+/* ==========================================================================
+   RESPONSIVE
+   Every width-dependent rule lives here, one block per breakpoint, widest
+   first. These are max-width queries, so narrower must come last to win.
 
-/* Touch sizing for the timeline, last in the sheet so it wins on source order
-   — the base rules below use !important and would otherwise override it.
-   28px buttons and an 8px frame number are fine with a mouse and far too
-   small with a thumb; the row scrolls, so width is cheaper than precision. */
-@media(max-width:560px){
+   This used to be six blocks scattered from the top of the sheet to the
+   bottom, with 640px appearing three times and 560px twice, so a narrow-screen
+   rule could sit ABOVE a base rule and lose to it. Compensating for that is
+   what most of the !important in this file was for. Put new responsive rules
+   here, in the block for their breakpoint.
+   ========================================================================== */
+@media (max-width:640px){
+  /* Keep the status-bar inset from the base rule — this is the phone branch,
+  which is exactly where a notch or punch-hole exists. */
+  #topbar{top:calc(16px + env(safe-area-inset-top,0px));left:50%;max-width:calc(100vw - 106px);gap:2px;padding:4px 6px;overflow:hidden}
+  #topbar .panel-grip{width:18px;min-width:18px;opacity:.38}
+  #topbar .tb{min-width:28px;width:28px;height:28px;padding:0;border-radius:var(--r-sm)}
+  #topbar .tb svg{width:14px;height:14px}
+  #topbar .tsep{height:20px;margin:0 3px}
+  #topbar #save-btn,#topbar #load-btn,#topbar #export-btn{display:none}
+  #topbar #rotate-info{display:none}
+  #topbar #zoom-info{min-width:38px;font-size:10px}
+  #tool-badge{top:18px;left:20px;max-width:74px;min-height:28px;padding:0 8px;gap:5px;overflow:hidden}
+  #tool-badge-desc{display:none}
+  #tool-badge-name{max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #canvas-area{padding-top:72px}
+  #prop-bar{width:max-content;min-width:150px;max-width:min(218px,calc(100vw - 112px));right:auto;bottom:auto;max-height:min(54vh,330px)}
+  body.focus-mode #canvas-area{padding-bottom:clamp(126px,24vh,194px)}
+  body.focus-mode #bottom{left:8px;right:8px;bottom:8px;width:auto;transform:none;border-radius:var(--r-card);max-height:36vh}
+  body.focus-mode #tlhdr{padding:7px 8px}
+  body.focus-mode #tlhdr .hdr-right #total-f{display:none}  /* not every span: .fps-wrap is one too */
+  body.focus-mode #tlscroll{max-height:24vh}
+}
+@media (max-width:620px){
+  #startup-inner{padding:24px 18px 92px;gap:16px}#startup-logo{width:46px;height:46px}#startup-title{font-size:21px}#startup-sub{font-size:11px}#startup-brand{gap:11px}#startup-recent-list{grid-template-columns:repeat(2,minmax(124px,1fr));gap:10px}.recent-name{font-size:12px}
+}
+@media (max-width:560px){
+  /* On a narrow screen the header overflows and the fps control is pushed off
+  the right edge — unreachable, because an auto margin sits outside the
+  scrollable extent. The frame count is the redundant part: the timeline
+  below already shows the frames. */
+  /* On a phone this row is wider than the screen, and the fps control sits at
+  the far end of the overflow — off the right edge and easy to miss entirely.
+  Dropping the two redundant readouts (both restate what the timeline
+  immediately below already shows) buys most of the room back, and pinning the
+  group to the visible edge guarantees the control is reachable at any width
+  rather than only at the ones measured here. */
+  #tlhdr .hdr-right #total-f{display:none}
+  #tlhdr .hdr-right{
+  position:sticky;
+  right:0;
+  background:rgba(24,28,36,.96);
+  padding-left:8px;
+  box-shadow:-10px 0 12px rgba(24,28,36,.92);
+  }
+  /* Touch sizing for the timeline, last in the sheet so it wins on source order
+  — the base rules below use !important and would otherwise override it.
+  28px buttons and an 8px frame number are fine with a mouse and far too
+  small with a thumb; the row scrolls, so width is cheaper than precision. */
   /* The row is 414px of content; below that it clips. Reclaim it from spacing
-     and from the fps chip rather than from the touch targets. */
+  and from the fps chip rather than from the touch targets. */
   #tlhdr{gap:4px!important;padding:6px!important}
-  #tlhdr .hdr-right{padding-left:5px!important}
-  .fps-btn{min-width:0!important;padding:0 7px 0 10px!important;gap:4px}
+  #tlhdr .hdr-right{padding-left:5px}
+  .fps-btn{min-width:0;padding:0 7px 0 10px;gap:4px}
   .fps-unit{display:none}
-
   #tlhdr .ib{width:36px!important;height:36px!important}
   /* Focus-mode selectors are more specific than the ones below, so they have to
-     be restated here or the header snaps back to 28px. */
+  be restated here or the header snaps back to 28px. */
   body.focus-mode #tlhdr .ib{min-height:36px!important;width:36px!important;height:36px!important}
   body.focus-mode #play-btn{min-height:36px!important;padding:6px 14px!important}
-  #tlhdr .ib svg{width:15px!important;height:15px!important}
+  #tlhdr .ib svg{width:15px;height:15px}
   #play-btn{min-height:36px!important;padding:6px 14px!important;font-size:12px!important}
-  #fps-btn{min-height:34px!important;font-size:12px!important}
+  #fps-btn{min-height:34px;font-size:12px}
   #scrubber-row{height:40px!important}
   /* Width comes from --tl-lbl-w (syncTLMetrics), not a literal: the scrubber
-     gutter and every getFrameX() offset are derived from the same TLLBLW, and
-     a second copy here is exactly how the ruler drifted 16px off the cells. */
-  .tlbl{font-size:11px!important;gap:5px}
+  gutter and every getFrameX() offset are derived from the same TLLBLW, and
+  a second copy here is exactly how the ruler drifted 16px off the cells. */
+  .tlbl{font-size:11px;gap:5px}
   .tlbl svg{width:11px;height:11px}
   /* The timeline header, tool rail and frame cells were all enlarged for touch,
-     but the top bar was missed: undo, redo, projects, export, grid and focus
-     stayed 28x28 — the smallest targets in the app and the only ones still
-     under the 32px floor everything else now clears. */
-  #topbar .tb{min-width:36px!important;width:36px!important;height:36px!important}
-  #topbar .tb svg{width:17px!important;height:17px!important}
+  but the top bar was missed: undo, redo, projects, export, grid and focus
+  stayed 28x28 — the smallest targets in the app and the only ones still
+  under the 32px floor everything else now clears. */
+  #topbar .tb{min-width:36px;width:36px;height:36px}
+  #topbar .tb svg{width:17px;height:17px}
 }
-/* At 320 the row still spills. The play glyph alone is unambiguous, and
-   dropping the word is a better trade than shrinking a touch target. Must come
-   after the block above, which sets padding with !important. */
-@media(max-width:340px){
+@media (max-width:430px){
+  #topbar{left:50%;right:auto;transform:translateX(-50%);max-width:calc(100vw - 16px);justify-content:center}
+  body.focus-mode #topbar{transform:translate(-50%,-8px)}
+  #tool-badge{display:none}
+}
+@media (max-width:420px){
+  #tlhdr #fctr{display:none}
+}
+@media (max-width:340px){
+  /* At 320 the row still spills. The play glyph alone is unambiguous, and
+  dropping the word is a better trade than shrinking a touch target. Must come
+  after the block above, which sets padding with !important. */
   #plbl{display:none}
   #play-btn{padding:6px 10px!important}
   #tlhdr{padding:4px!important;gap:3px!important}
+}
+@media (hover:hover){
+  .recent-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 20px 38px rgba(0,0,0,0.42),0 0 0 1px var(--accent)}
 }
 </style>
 </head>
