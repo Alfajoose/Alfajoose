@@ -23,7 +23,14 @@ defaults:
     working-directory: native
 
 jobs:
+  # Shipping an APK that fails the suite wastes a sideload and a test cycle on
+  # the phone, so the build waits for green. Reused rather than copied so the
+  # two workflows cannot drift apart.
+  test:
+    uses: ./.github/workflows/test.yml
+
   build:
+    needs: test
     runs-on: ubuntu-latest
 
     steps:

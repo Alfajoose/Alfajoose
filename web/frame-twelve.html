@@ -634,6 +634,12 @@ input::selection,textarea::selection{background:rgba(74,111,212,.85);color:#fff}
      a second copy here is exactly how the ruler drifted 16px off the cells. */
   .tlbl{font-size:11px!important;gap:5px}
   .tlbl svg{width:11px;height:11px}
+  /* The timeline header, tool rail and frame cells were all enlarged for touch,
+     but the top bar was missed: undo, redo, projects, export, grid and focus
+     stayed 28x28 — the smallest targets in the app and the only ones still
+     under the 32px floor everything else now clears. */
+  #topbar .tb{min-width:36px!important;width:36px!important;height:36px!important}
+  #topbar .tb svg{width:17px!important;height:17px!important}
 }
 /* At 320 the row still spills. The play glyph alone is unambiguous, and
    dropping the word is a better trade than shrinking a touch target. Must come
@@ -3737,6 +3743,35 @@ CA.addEventListener('touchend',e=>{
   holdActive=false;
   if(_pendingUndoBefore) finalizeUndoDraw(); // build the dirty-rect undo entry
   renderFrame(); updateThumb(); buildTL();
+});
+
+// A stroke's undo entry is built by finalizeUndoDraw() from the before-image
+// captured at pointerdown. The mouse/stylus pointerup handler has eight exit
+// paths and none of them reached that call, so a completed mouse or stylus
+// stroke left the capture dangling: undoStack stayed empty, updateUndoBtns()
+// never ran, and the Undo button stayed disabled — the FIRST stroke on a frame
+// could not be undone at all, and undo was permanently one stroke behind
+// (the entry only appeared later, when the next saveUndoDraw() flushed it).
+// Finger input was unaffected: the touchend handler above does finalize.
+//
+// Rather than add the call to each exit and trust the next edit to remember,
+// finalize once here. Two ordering constraints, both learned the hard way:
+//
+//  1. This must stay AFTER every drawing handler. Registration order is listener
+//     order, and registered earlier it runs before the stroke is committed to
+//     the layer, sees no pixel change, and throws the capture away.
+//  2. Touch pointer events must be ignored. For finger input Chromium fires
+//     pointerup BEFORE touchend, so finalizing on pointerup would again beat
+//     the commit — the same guard the main pointerup handler uses. Finger
+//     strokes are finalized by touchend, which runs after they commit.
+//
+// finalizeUndoDraw() is a no-op when nothing is pending, so reaching it twice
+// is harmless.
+['pointerup','pointercancel','touchend','touchcancel'].forEach(evt=>{
+  CA.addEventListener(evt,e=>{
+    if(e && e.pointerType==='touch') return;
+    if(_pendingUndoBefore) finalizeUndoDraw();
+  },{passive:true});
 });
 
 // keyboard
