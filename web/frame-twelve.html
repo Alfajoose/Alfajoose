@@ -342,7 +342,7 @@ canvas{display:block}
 .fc.hc .dot{width:7px;height:7px;background:var(--accent);border-radius:50%}
 .fc.cur{background:rgba(74,158,255,0.13)}
 .fc.cur::after{content:'';position:absolute;top:0;bottom:0;left:50%;width:2px;transform:translateX(-50%);background:var(--accent);box-shadow:0 0 9px rgba(74,158,255,0.55);z-index:4}
-.fn{position:absolute;bottom:2px;left:3px;font-size:8px;color:rgba(170,190,220,0.45);font-variant-numeric:tabular-nums}
+.fn{position:absolute;bottom:3px;left:5px;font-size:10px;color:rgba(170,190,220,0.45);font-variant-numeric:tabular-nums}
 .fhb{position:absolute;top:2px;right:2px;font-size:7px;color:var(--blue);font-weight:700}
 .addfc{width:42px;height:100%;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--accent);font-size:22px;font-weight:300;border-left:1px solid var(--b2);background:rgba(45,82,184,0.1)}
 .addfc:hover{background:rgba(45,82,184,0.2);color:#5b82e8}
@@ -625,6 +625,19 @@ input::selection,textarea::selection{background:rgba(74,111,212,.85);color:#fff}
 /* -- NEW FEATURES -- */
 
 
+/* Touch sizing for the timeline, last in the sheet so it wins on source order
+   — the base rules below use !important and would otherwise override it.
+   28px buttons and an 8px frame number are fine with a mouse and far too
+   small with a thumb; the row scrolls, so width is cheaper than precision. */
+@media(max-width:560px){
+  #tlhdr .ib{width:36px!important;height:36px!important}
+  #tlhdr .ib svg{width:15px!important;height:15px!important}
+  #play-btn{min-height:36px!important;padding:6px 14px!important;font-size:12px!important}
+  #fps-btn{min-height:34px!important;font-size:12px!important}
+  #scrubber-row{height:40px!important}
+  .tlbl{width:88px!important;font-size:11px!important;gap:5px}
+  .tlbl svg{width:11px;height:11px}
+}
 </style>
 </head>
 <body>
@@ -1002,6 +1015,21 @@ function _fitPanX(){
   const overhang=(box.availW/2 + (fitZoom*CW)/2) - box.usableW;
   return overhang>0 ? -overhang : 0;
 }
+
+// Timeline metrics. These were seven copies of the literal 36 and four of 72
+// scattered through the build paths, so resizing a frame cell meant finding
+// every one. Phones get the larger set: the old 36x51 cell and 28px header
+// buttons were well under any touch-target guidance.
+let TLFW=46, TLLBLW=76;
+function syncTLMetrics(){
+  const compact = window.innerWidth <= 560;
+  TLFW   = compact ? 54 : 46;
+  TLLBLW = compact ? 88 : 76;
+  const root = document.documentElement.style;
+  root.setProperty('--track-h', (compact ? 68 : 58) + 'px');
+}
+syncTLMetrics();
+window.addEventListener('resize', syncTLMetrics);
 
 function recalcFitZoom(){
   const box=_fitBox();
@@ -3937,7 +3965,7 @@ function updateTLHighlight(prevFrame, nextFrame){
 }
 
 function getFrameX(f){
-  const lblW=72, FW=36;
+  const lblW=TLLBLW, FW=TLFW;
   let x=lblW;
   for(let i=0;i<f;i++) x+=FW*(layers[0].holds[i]||1);
   return x;
@@ -3949,7 +3977,7 @@ function drawScrubberRuler(){
   const W=cv.width, H=cv.height;
   const rc=cv.getContext('2d');
   rc.clearRect(0,0,W,H);
-  const FW=36;
+  const FW=TLFW;
   let x=0;
   for(let f=0;f<totalFrames;f++){
     const hold=layers[0].holds[f]||1;
@@ -3973,7 +4001,7 @@ function drawScrubberRuler(){
 function updateScrubber(){
   const thumb=document.getElementById('scrubber-thumb');
   if(!thumb) return;
-  const FW=36, hold=layers[0].holds[curFrame]||1;
+  const FW=TLFW, hold=layers[0].holds[curFrame]||1;
   const lx=getFrameX(curFrame);
   const cx=lx+FW*hold/2;
   thumb.style.left=(cx-1)+'px';
@@ -3987,7 +4015,7 @@ function initScrubber(){
     const sr=document.getElementById('scrubber-row');
     if(!sr) return curFrame;
     const rect=sr.getBoundingClientRect();
-    const lblW=72, FW=36;
+    const lblW=TLLBLW, FW=TLFW;
     let rx=clientX-rect.left-lblW;
     if(rx<0) return 0;
     let cum=0;
@@ -5950,7 +5978,7 @@ function getOnionRange(){
 
 function drawTLThumb(cell, layer, fi, onionType){
   // onionType: null | 'prev' | 'next'
-  const TW=36, TH=48;
+  const TW=TLFW, TH=Math.round(TLFW*4/3);
   const tc=document.createElement('canvas');
   tc.width=TW; tc.height=TH;
   tc.style.cssText=`position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;`;
@@ -5982,7 +6010,7 @@ function drawTLThumb(cell, layer, fi, onionType){
 
 function buildTL(){
   const tl=document.getElementById('tl');tl.innerHTML='';
-  const FW=36; // wider cells so thumbnails show
+  const FW=TLFW; // wider cells so thumbnails show
   const {back,fwd}=getOnionRange();
 
   // Single timeline track: only the active layer is shown. Use the label
@@ -6042,16 +6070,16 @@ function buildTL(){
       const dot=document.createElement('div');
       dot.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;';
       if(frameHasContent){
-        dot.innerHTML=`<div style="width:8px;height:8px;border-radius:50%;background:${lcolor}"></div>`;
+        dot.innerHTML=`<div style="width:11px;height:11px;border-radius:50%;background:${lcolor}"></div>`;
       } else {
-        dot.innerHTML=`<div style="width:8px;height:8px;border-radius:50%;border:1.5px solid ${lcolor};opacity:0.4;background:transparent"></div>`;
+        dot.innerHTML=`<div style="width:11px;height:11px;border-radius:50%;border:1.5px solid ${lcolor};opacity:0.4;background:transparent"></div>`;
       }
       cell.appendChild(dot);
 
       // frame number label
       const fn=document.createElement('span');
       fn.className='tl-fn';
-      fn.style.cssText=`position:absolute;bottom:2px;left:3px;font-size:8px;color:${f===curFrame&&li===curLayer?'#fff':'#484848'};font-weight:${f===curFrame&&li===curLayer?'700':'400'};z-index:2;pointer-events:none;`;
+      fn.style.cssText=`position:absolute;bottom:3px;left:5px;font-size:10px;color:${f===curFrame&&li===curLayer?'#fff':'#484848'};font-weight:${f===curFrame&&li===curLayer?'700':'400'};z-index:2;pointer-events:none;`;
       fn.textContent=f+1;
       cell.appendChild(fn);
 
@@ -6168,7 +6196,7 @@ function initTLDrag(){
     e.preventDefault();
     const dropF=tlDropTarget(e.clientX,_tlDrag.srcF);
     _tlDrag.dropF=dropF;
-    const FW=36,lblW=72;
+    const FW=TLFW,lblW=TLLBLW;
     let x=lblW;
     for(let i=0;i<dropF;i++) x+=FW*(layers[0].holds[i]||1);
     _tlDrag.indicator.style.left=x+'px';
@@ -6208,7 +6236,7 @@ function initTLDrag(){
 function tlDropTarget(clientX,srcF){
   const tl=document.getElementById('tl');
   if(!tl) return srcF??0;
-  const FW=36,lblW=72;
+  const FW=TLFW,lblW=TLLBLW;
   const tlRect=tl.getBoundingClientRect();
   let rx=clientX-tlRect.left-lblW;
   let cum=0;
