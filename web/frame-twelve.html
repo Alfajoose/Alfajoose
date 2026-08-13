@@ -305,7 +305,7 @@ canvas{display:block}
 #scrubber-row.scrubbing #scrubber-thumb{width:3px;background:#fff}
 #scrubber-row.scrubbing #scrubber-thumb::before{background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.55)}
 .track{display:flex;align-items:center;height:var(--track-h);border-bottom:1px solid rgba(74,158,255,0.10)}
-.tlbl{width:72px;padding:0 4px 0 8px;font-size:9px;color:var(--t2);flex-shrink:0;border-right:1px solid rgba(74,158,255,0.14);background:#101827;display:flex;align-items:center;gap:3px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tlbl{width:var(--tl-lbl-w,76px);padding:0 4px 0 8px;font-size:9px;color:var(--t2);flex-shrink:0;border-right:1px solid rgba(74,158,255,0.14);background:#101827;display:flex;align-items:center;gap:3px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .tlbl:hover{background:rgba(74,158,255,0.12)}
 .tlbl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 .tlbl-caret{flex-shrink:0;opacity:.55}
@@ -646,7 +646,10 @@ input::selection,textarea::selection{background:rgba(74,111,212,.85);color:#fff}
   #play-btn{min-height:36px!important;padding:6px 14px!important;font-size:12px!important}
   #fps-btn{min-height:34px!important;font-size:12px!important}
   #scrubber-row{height:40px!important}
-  .tlbl{width:88px!important;font-size:11px!important;gap:5px}
+  /* Width comes from --tl-lbl-w (syncTLMetrics), not a literal: the scrubber
+     gutter and every getFrameX() offset are derived from the same TLLBLW, and
+     a second copy here is exactly how the ruler drifted 16px off the cells. */
+  .tlbl{font-size:11px!important;gap:5px}
   .tlbl svg{width:11px;height:11px}
 }
 /* At 320 the row still spills. The play glyph alone is unambiguous, and
@@ -1040,6 +1043,7 @@ function _fitPanX(){
 // every one. Phones get the larger set: the old 36x51 cell and 28px header
 // buttons were well under any touch-target guidance.
 let TLFW=46, TLLBLW=76;
+let _tlCompact=null;
 function syncTLMetrics(){
   const compact = window.innerWidth <= 560;
   TLFW   = compact ? 54 : 46;
@@ -1048,9 +1052,19 @@ function syncTLMetrics(){
   root.setProperty('--track-h', (compact ? 68 : 58) + 'px');
   // Focus mode slims the timeline deliberately, but not below a usable target.
   root.setProperty('--track-h-focus', (compact ? 58 : 46) + 'px');
+  // .tlbl reads this instead of carrying its own literal, so the label gutter
+  // can never disagree with the TLLBLW that getFrameX/updateScrubber assume.
+  root.setProperty('--tl-lbl-w', TLLBLW + 'px');
+  const flipped = _tlCompact!==null && _tlCompact!==compact;
+  _tlCompact = compact;
+  return flipped;
 }
 syncTLMetrics();
-window.addEventListener('resize', syncTLMetrics);
+window.addEventListener('resize', ()=>{
+  // Crossing the breakpoint changes TLFW/TLLBLW, but the cell and scrubber
+  // widths are inline styles written by buildTL — stale until it runs again.
+  if(syncTLMetrics() && typeof buildTL==='function' && layers && layers.length) buildTL();
+});
 
 // The focus-mode dial and colour chip sat at a hard bottom:150px, which assumed
 // a timeline of a particular height — they ended up behind it once the cells
@@ -4015,6 +4029,11 @@ function getFrameX(f){
 function drawScrubberRuler(){
   const cv=document.getElementById('scrubber-ruler-cv');
   if(!cv) return;
+  // Match the backing store to the rendered box. The row is 32/40/28px high
+  // depending on touch sizing and focus mode, and a fixed 32 left the ticks
+  // floating in an 8px dead band on phones.
+  const rh=Math.round(cv.getBoundingClientRect().height);
+  if(rh>0 && cv.height!==rh) cv.height=rh;
   const W=cv.width, H=cv.height;
   const rc=cv.getContext('2d');
   rc.clearRect(0,0,W,H);
@@ -6193,18 +6212,31 @@ function buildTL(){
   // Scrubber row at top of timeline
   let totalFW=0; layers[0].holds.forEach(h=>totalFW+=FW*(h||1));
   const sr=document.createElement('div'); sr.id='scrubber-row';
-  sr.style.width=(72+totalFW)+'px';   // span the full strip so it scrolls with frames
+  // The gutter must be TLLBLW, not a literal: the ruler ticks and the thumb are
+  // both offset by it, so a stale 72 here slid the whole ruler 16px left of the
+  // cells on phones and put the thumb 4px off centre on desktop.
+  sr.style.width=(TLLBLW+totalFW)+'px';   // span the full strip so it scrolls with frames
   const sl=document.createElement('div');
-  sl.style.cssText='width:72px;flex-shrink:0;border-right:1px solid rgba(74,158,255,0.14);background:#101827;display:flex;align-items:center;justify-content:center;gap:4px';
+  sl.style.cssText=`width:${TLLBLW}px;flex-shrink:0;border-right:1px solid rgba(74,158,255,0.14);background:#101827;display:flex;align-items:center;justify-content:center;gap:4px`;
   // small affordance so the strip reads as the scrubber
   sl.innerHTML='<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M2 6l2-2M2 6l2 2M10 6l-2-2M10 6l-2 2" stroke="#4a9eff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:8.5px;color:#4a9eff;font-weight:600;letter-spacing:.3px">SCRUB</span>';
   sr.appendChild(sl);
   const rulerCv=document.createElement('canvas'); rulerCv.id='scrubber-ruler-cv';
-  rulerCv.width=totalFW; rulerCv.height=32;
-  rulerCv.style.cssText=`width:${totalFW}px;height:32px;flex-shrink:0;display:block`;
+  // Height is left to the flex stretch so the ruler fills whatever the row is
+  // (32 desktop / 40 touch / 28 focus); drawScrubberRuler syncs the backing
+  // store to the rendered box rather than assuming 32.
+  rulerCv.width=totalFW;
+  rulerCv.style.cssText=`width:${totalFW}px;height:auto;align-self:stretch;flex-shrink:0;display:block`;
   sr.appendChild(rulerCv);
   const sth=document.createElement('div'); sth.id='scrubber-thumb'; sr.appendChild(sth);
   tl.insertBefore(sr,tl.firstChild);
+  // Focus mode and the touch breakpoint both change the row height from CSS,
+  // with no JS hook to redraw on — observe the row instead of patching every
+  // caller that might resize it.
+  if(window.ResizeObserver && !sr._ro){
+    sr._ro=new ResizeObserver(()=>{ drawScrubberRuler(); updateScrubber(); });
+    sr._ro.observe(sr);
+  }
   drawScrubberRuler();
   updateScrubber();
   initTLDrag();
