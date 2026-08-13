@@ -89,9 +89,9 @@ select.ts{background:var(--s3);border:1px solid var(--b2);color:var(--text);bord
 #focus-exit-btn{display:none;position:absolute;top:14px;right:18px;z-index:220;width:32px;height:32px;border:1px solid var(--b2);border-radius:var(--r-ctl);background:rgba(22,22,22,0.86);color:var(--text);cursor:pointer;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,0.38)}
 #focus-exit-btn:hover{background:var(--s3);color:#fff}
 /* -- Focus-mode radial quick dial -- */
-#focus-dial{display:none;position:absolute;left:24px;bottom:150px;z-index:215;width:60px;height:60px;touch-action:none}
+#focus-dial{display:none;position:absolute;left:24px;bottom:var(--focus-dock,150px);z-index:215;width:60px;height:60px;touch-action:none}
 body.focus-mode #focus-dial{display:block}
-#focus-color{display:none;position:absolute;right:24px;bottom:150px;z-index:215;width:48px;height:48px;border-radius:50%;border:2px solid rgba(255,255,255,.7);background:#000;cursor:grab;touch-action:none;opacity:.78;transition:opacity .15s ease,transform .12s ease;box-shadow:0 6px 18px rgba(0,0,0,.34),inset 0 0 0 2px rgba(0,0,0,.4);-webkit-tap-highlight-color:transparent;padding:0}
+#focus-color{display:none;position:absolute;right:24px;bottom:var(--focus-dock,150px);z-index:215;width:48px;height:48px;border-radius:50%;border:2px solid rgba(255,255,255,.7);background:#000;cursor:grab;touch-action:none;opacity:.78;transition:opacity .15s ease,transform .12s ease;box-shadow:0 6px 18px rgba(0,0,0,.34),inset 0 0 0 2px rgba(0,0,0,.4);-webkit-tap-highlight-color:transparent;padding:0}
 body.focus-mode #focus-color{display:block}
 #focus-color:hover,#focus-color.awake{opacity:1}
 #focus-color:active{cursor:grabbing;transform:scale(.96)}
@@ -1050,6 +1050,25 @@ function syncTLMetrics(){
 syncTLMetrics();
 window.addEventListener('resize', syncTLMetrics);
 
+// The focus-mode dial and colour chip sat at a hard bottom:150px, which assumed
+// a timeline of a particular height — they ended up behind it once the cells
+// grew. Track the real height so they clear it however tall it gets: with an
+// audio row, with several layers, at any cell size.
+function syncFocusDock(){
+  const bottom=document.getElementById('bottom');
+  if(!bottom) return;
+  const h=Math.round(bottom.getBoundingClientRect().height);
+  if(h>0) document.documentElement.style.setProperty('--focus-dock', (h+22)+'px');
+}
+window.addEventListener('resize', syncFocusDock);
+// Height changes for reasons a resize event never fires for — an audio track
+// appearing, a layer added, the cells resizing — so watch the element itself.
+if(window.ResizeObserver){
+  const dock=document.getElementById('bottom');
+  if(dock) new ResizeObserver(syncFocusDock).observe(dock);
+}
+syncFocusDock();
+
 function recalcFitZoom(){
   const box=_fitBox();
   if(!box) return;
@@ -1954,6 +1973,7 @@ function redo(){
 }
 function updateUndoBtns(){document.getElementById('undo-btn').disabled=!undoStack.length;document.getElementById('redo-btn').disabled=!redoStack.length}
 function toggleFocusMode(force){
+  setTimeout(syncFocusDock,0); setTimeout(syncFocusDock,260);
   focusMode = (typeof force==='boolean') ? force : !focusMode;
   if(focusMode) prepareCanvasAction();
   const tc=document.getElementById('tc');
