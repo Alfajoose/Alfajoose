@@ -217,6 +217,40 @@ test.describe('lazy frame buffers', () => {
       noErrors();
     });
 
+  // Reclaiming is destructive, so its emptiness check must be exact. The first
+  // implementation reused _hasContentScan(), which SAMPLES every 4th pixel for
+  // the timeline dots — a 1px hairline read as empty and the frame was thrown
+  // away. These are the sparse cases a sampler misses.
+  for (const [name, draw] of [
+    ['a 1px hairline', 'c.fillRect(10, 0, 1, CH)'],
+    ['a single pixel', 'c.fillRect(CW - 1, CH - 1, 1, 1)'],
+    ['a sparse dotted line', 'for (let x = 0; x < CW; x += 37) c.fillRect(x, 20, 1, 1)'],
+  ]) {
+    test(`reclaim preserves ${name}`, async ({ page }) => {
+      const noErrors = H.watchErrors(page);
+      await H.boot(page, 'Sparse');
+
+      const survived = await page.evaluate((expr) => {
+        const c = _wf(0, 3);
+        c.fillStyle = '#000';
+        // eslint-disable-next-line no-eval
+        eval(expr);
+        delete c.canvas._hasContent;      // force reclaim to decide for itself
+        reclaimBlankFrames();
+        const after = layers[0].frames[3];
+        const cv = after.canvas;
+        return {
+          deferred: cv.width !== CW,
+          painted: after.getImageData(0, 0, cv.width, cv.height).data.some((v) => v !== 0),
+        };
+      }, draw);
+
+      expect(survived.deferred, 'a frame with artwork must not be reclaimed').toBe(false);
+      expect(survived.painted, 'the artwork must still be there').toBe(true);
+      noErrors();
+    });
+  }
+
   test('a project round-trips through save and load with deferred frames',
     async ({ page }) => {
       const noErrors = H.watchErrors(page);

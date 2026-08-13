@@ -1200,9 +1200,27 @@ function _copyFrameCtx(src){
   return n;
 }
 /**
- * Give back the buffers of frames that are materialised but provably empty.
- * Only ever shrinks a frame with no content that is not the one being edited,
- * so nothing can be lost. Debounced because it walks every frame.
+ * Is this frame EXACTLY empty? Every alpha byte, no sampling.
+ *
+ * _hasContentScan() must not be used for this. It steps through every 4th pixel
+ * (more at higher resolutions) because its job is deciding whether to draw a
+ * filled dot on a timeline cell, where a false negative is a wrong dot. Used to
+ * authorise reclaiming a buffer, the same false negative deletes the user's
+ * work: a 1px hairline reports empty and the frame is thrown away. Reclaiming
+ * is destructive, so it gets an exact answer or it does not run.
+ */
+function _isFrameEmptyExact(ctx){
+  try{
+    const cv=ctx.canvas;
+    const d=ctx.getImageData(0,0,cv.width,cv.height).data;
+    for(let i=3;i<d.length;i+=4) if(d[i]!==0) return false;
+    return true;
+  }catch(_){ return false; }   // unreadable → assume content, never discard
+}
+/**
+ * Give back the buffers of frames that are materialised but exactly empty.
+ * Never touches the frame being edited, and never a frame with any pixel in it.
+ * Debounced because it walks every frame.
  */
 let _reclaimTimer=null;
 function scheduleReclaim(){
@@ -1221,10 +1239,12 @@ function reclaimBlankFrames(){
       if(!ctx||_isDeferred(ctx)) continue;
       const cv=ctx.canvas;
       if(cv._hasContent===true) continue;                // known to have artwork
-      if(cv._hasContent===undefined){                    // unknown — check it
-        if(typeof _hasContentScan==='function') _hasContentScan(ctx);
-        if(cv._hasContent===true) continue;
-      }
+      // Sampling can only produce false NEGATIVES, so a positive is trustworthy
+      // and settles the frame cheaply. Only a frame that looks empty to the
+      // sampler pays for the exact scan below — and once shrunk it is never a
+      // candidate again, so the cost is paid at most once per frame.
+      if(typeof _hasContentScan==='function' && _hasContentScan(ctx)) continue;
+      if(!_isFrameEmptyExact(ctx)){ cv._hasContent=true; continue; }
       cv.width=1; cv.height=1;
       freed++;
     }
