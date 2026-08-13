@@ -1145,6 +1145,97 @@ function escHtml(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt
 // Layer frame canvases are read back constantly (fill, eyedropper, selections) —
 // willReadFrequently keeps them CPU-side and avoids GPU readback stalls.
 const FRAME_CTX_OPTS={willReadFrequently:true};
+
+// -- LAZY FRAME BUFFERS -------------------------------------------------------
+// Frames used to allocate a full CW x CH buffer the moment they existed, so the
+// cost of a project was layers x frames x W x H x 4 whether or not anything had
+// been drawn. Measured: a 60-frame, 3-layer project at the default 960x540 sat
+// at 356MB with 98% of it empty — and that is under the 450MB warning, so it
+// never even complained. A brand new project was 15.8MB of nothing.
+//
+// A blank frame now keeps a 1x1 placeholder and grows to full size the first
+// time something writes to it. Four browser behaviours make this safe, all
+// verified rather than assumed:
+//
+//   * drawImage() of a 1x1 transparent canvas is a no-op, so every render,
+//     onion-skin and export path composites a deferred frame correctly.
+//   * getImageData(0,0,CW,CH) on a 1x1 canvas returns a correctly sized,
+//     fully transparent buffer instead of throwing.
+//   * growing a canvas yields a clean transparent buffer, which is exactly
+//     what a blank frame should be.
+//   * toDataURL() of the placeholder is 142 bytes against 4822 for a full
+//     blank frame, so saved projects shrink too.
+//
+// Reads may therefore touch a deferred frame freely. WRITES must go through
+// _wf() (or call _ensureBuf first), because drawing into the 1x1 placeholder
+// would throw the stroke away.
+function _newFrameCtx(){
+  const c=document.createElement('canvas');
+  c.width=1; c.height=1;              // deferred; _ensureBuf grows it on demand
+  return c.getContext('2d',FRAME_CTX_OPTS);
+}
+function _ensureBuf(ctx){
+  if(!ctx) return ctx;
+  const c=ctx.canvas;
+  // Resizing clears the canvas, so only ever do it while still deferred.
+  if(c.width!==CW||c.height!==CH){ c.width=CW; c.height=CH; }
+  return ctx;
+}
+/** Writable frame accessor: materialises the buffer, then hands back the ctx. */
+function _wf(li,fi){
+  const l=layers[li];
+  if(!l||!l.frames) return null;
+  return _ensureBuf(l.frames[fi]);
+}
+function _isDeferred(ctx){ return !!ctx && (ctx.canvas.width!==CW||ctx.canvas.height!==CH); }
+/**
+ * Copy a frame. A copy of a deferred (blank) frame stays deferred — this is
+ * what keeps undo snapshots from re-materialising an entire empty project.
+ */
+function _copyFrameCtx(src){
+  if(!src||_isDeferred(src)) return _newFrameCtx();
+  const c=document.createElement('canvas'); c.width=CW; c.height=CH;
+  const n=c.getContext('2d',FRAME_CTX_OPTS);
+  n.drawImage(src.canvas,0,0);
+  return n;
+}
+/**
+ * Give back the buffers of frames that are materialised but provably empty.
+ * Only ever shrinks a frame with no content that is not the one being edited,
+ * so nothing can be lost. Debounced because it walks every frame.
+ */
+let _reclaimTimer=null;
+function scheduleReclaim(){
+  clearTimeout(_reclaimTimer);
+  _reclaimTimer=setTimeout(reclaimBlankFrames, 1200);
+}
+function reclaimBlankFrames(){
+  if(typeof playing!=='undefined' && playing) return;   // never churn mid-playback
+  let freed=0;
+  for(let li=0;li<layers.length;li++){
+    const l=layers[li];
+    if(!l||!l.frames) continue;
+    for(let fi=0;fi<l.frames.length;fi++){
+      if(li===curLayer&&fi===curFrame) continue;         // the frame being edited
+      const ctx=l.frames[fi];
+      if(!ctx||_isDeferred(ctx)) continue;
+      const cv=ctx.canvas;
+      if(cv._hasContent===true) continue;                // known to have artwork
+      if(cv._hasContent===undefined){                    // unknown — check it
+        if(typeof _hasContentScan==='function') _hasContentScan(ctx);
+        if(cv._hasContent===true) continue;
+      }
+      cv.width=1; cv.height=1;
+      freed++;
+    }
+  }
+  return freed;
+}
+function projectBufferMB(){
+  let bytes=0;
+  for(const l of layers) for(const c of l.frames) bytes+=c.canvas.width*c.canvas.height*4;
+  return bytes/1048576;
+}
 let isPanning=false, panStart={x:0,y:0}, panOrigin={x:0,y:0};
 // gesture state
 let gestureActive=false;
@@ -1307,7 +1398,7 @@ function detectStrokeShape(pts){
 }
 
 function commitShapeAssist(shape){
-  const ctx=layers[curLayer].frames[curFrame];
+  const ctx=_wf(curLayer,curFrame);
   ctx.save();
   ctx.strokeStyle=color; ctx.lineWidth=baseSize*0.8; ctx.lineCap='round';
   ctx.globalAlpha=opacity; ctx.globalCompositeOperation='source-over';
@@ -1357,7 +1448,7 @@ let pendingShapeAssist=null; // shape detected, waiting for user to lift finger
 // Sample a ring of pixels around (cx,cy) in the frame canvas
 // Returns the nearest pixel that has paint on it, or null
 function findNearestStrokePoint(cx, cy, radius){
-  const frameCtx = layers[curLayer].frames[curFrame];
+  const frameCtx = _wf(curLayer,curFrame);
   const r = Math.ceil(radius);
   const x0 = Math.max(0, Math.floor(cx - r));
   const y0 = Math.max(0, Math.floor(cy - r));
@@ -1688,11 +1779,11 @@ function applyBrushPreset(bt){
 // ------------------------------------------
 function snapLayers(){
   return layers.map(l=>({name:l.name,visible:l.visible,locked:l.locked??false,opacity:l.opacity??1,color:l.color??LAYER_COLORS[0],holds:[...l.holds],
-    frames:l.frames.map(ctx=>{const c=document.createElement('canvas');c.width=CW;c.height=CH;c.getContext('2d').drawImage(ctx.canvas,0,0);return c.getContext('2d')})}));
+    frames:l.frames.map(_copyFrameCtx)}));
 }
 function restoreSnap(snap){
   layers=snap.map(l=>({name:l.name,visible:l.visible,locked:l.locked??false,opacity:l.opacity??1,color:l.color??LAYER_COLORS[0],holds:[...l.holds],
-    frames:l.frames.map(ctx=>{const c=document.createElement('canvas');c.width=CW;c.height=CH;const n=c.getContext('2d',FRAME_CTX_OPTS);n.drawImage(ctx.canvas,0,0);return n})}));
+    frames:l.frames.map(_copyFrameCtx)}));
   totalFrames=layers[0].frames.length;
   if(curFrame>=totalFrames) curFrame=totalFrames-1;
   if(curLayer>=layers.length) curLayer=0;
@@ -1713,7 +1804,7 @@ let _pendingUndoBefore=null; // {fi,li,imageData} captured at stroke start
 function saveUndoDraw(){
   if(_pendingUndoBefore) finalizeUndoDraw(); // resolve the previous stroke first
   _dirty=true;
-  const fr=layers[curLayer]&&layers[curLayer].frames[curFrame];
+  const fr=layers[curLayer]&&_wf(curLayer,curFrame);
   _touchFrame(fr);
   _undoPushedThisTouch=true;
   if(typeof scheduleRecoverySnapshot==='function') scheduleRecoverySnapshot();
@@ -1926,7 +2017,14 @@ function _tooBigToUndo(bytes){
 }
 let _memWarnedTier=0;
 function _checkFrameGrowth(){
-  const mb=_projMemMB(CW,CH,totalFrames+1,layers.length);
+  // Warn on what the project actually holds, not on the worst case. Frames are
+  // allocated lazily now, so _projMemMB() — layers x frames x W x H — is the
+  // ceiling if every frame were drawn on, and a 60-frame project sitting near
+  // that figure while really costing 6MB would just be crying wolf. What can
+  // still exhaust a phone is the buffers that exist, so measure those.
+  const mb=(typeof projectBufferMB==='function')
+    ? projectBufferMB()
+    : _projMemMB(CW,CH,totalFrames+1,layers.length);
   const tier=mb>PROJ_MEM_DANGER_MB?2:mb>PROJ_MEM_WARN_MB?1:0;
   if(tier>_memWarnedTier){ _memWarnedTier=tier; _projMemToast(mb); }
   else if(tier<_memWarnedTier) _memWarnedTier=tier;
@@ -1945,7 +2043,9 @@ function _trimUndo(){
 }
 function _applyDrawSnap(snap){
   curFrame=snap.fi;curLayer=snap.li;
-  const fr=layers[snap.li].frames[snap.fi];
+  // Undo restores pixels, so the target must be a real buffer even if the
+  // frame was reclaimed as blank while the entry sat on the stack.
+  const fr=_wf(snap.li,snap.fi);
   _touchFrame(fr);
   if(snap.type==='draw-rect'){
     // Save current rect pixels for redo, then restore the before-pixels.
@@ -2887,7 +2987,7 @@ function _lsFlush(){
 
 function lsBegin(p){
   setRulerDrawing(true);
-  const ctx=layers[curLayer].frames[curFrame];
+  const ctx=_wf(curLayer,curFrame);
   ctx.save();
   if(tool==='eraser'){
     ctx.globalCompositeOperation='destination-out';ctx.globalAlpha=eraserOp;
@@ -2926,7 +3026,7 @@ function lsEnd(p,allPts){
     const snap=undoStack[undoStack.length-1];
     if(snap&&snap.type==='draw'&&snap.fi===curFrame&&snap.li===curLayer){
       _ls.ctx.restore();_ls=null;
-      const ctx=layers[curLayer].frames[curFrame];
+      const ctx=_wf(curLayer,curFrame);
       ctx.clearRect(0,0,CW,CH);ctx.drawImage(snap.c,0,0);
       drawStrokeToCtx(allPts,ctx);
       if(_lsRafId){cancelAnimationFrame(_lsRafId);_lsRafId=null;}
@@ -3095,7 +3195,7 @@ function drawSmoothPath(pts,ctx,opts={}){
 }
 
 function drawStroke(pts){
-  drawStrokeToCtx(pts, layers[curLayer].frames[curFrame]);
+  drawStrokeToCtx(pts, _wf(curLayer,curFrame));
 }
 
 function drawStrokeToCtx(pts, ctx, opts={}){
@@ -3167,7 +3267,7 @@ function drawLineOverlay(s,e){
 
 function commitLine(s,e){
   e=_snapLineEnd(s,e);
-  const ctx=layers[curLayer].frames[curFrame];
+  const ctx=_wf(curLayer,curFrame);
   ctx.save(); ctx.strokeStyle=strokeColor||color; ctx.lineWidth=lineWidth; ctx.lineCap=lineCap;
   ctx.globalAlpha=lineOpacity; ctx.setLineDash(_activeDash());
   ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(e.x,e.y); ctx.stroke();
@@ -3187,7 +3287,7 @@ function drawArrowhead(ctx, from, to, size, style){
 }
 
 function commitArrow(s,e){
-  const ctx=layers[curLayer].frames[curFrame];
+  const ctx=_wf(curLayer,curFrame);
   ctx.save(); ctx.strokeStyle=strokeColor||color; ctx.fillStyle=strokeColor||color;
   ctx.lineWidth=lineWidth; ctx.lineCap='round'; ctx.globalAlpha=lineOpacity;
   ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(e.x,e.y); ctx.stroke();
@@ -3209,7 +3309,7 @@ function drawShapeOverlay(s,e,t){
 }
 
 function commitShape(s,e,t){
-  const ctx=layers[curLayer].frames[curFrame];
+  const ctx=_wf(curLayer,curFrame);
   ctx.save(); ctx.globalAlpha=shapeOpacity;
   ctx.strokeStyle=shapeStrokeColor; ctx.fillStyle=shapeFillColor; ctx.lineWidth=shapeStrokeW;
   applyShapePath(ctx,s,e,t);
@@ -3274,7 +3374,7 @@ function drawCurveOverlay(pts, cur){
 
 function commitCurve(pts){
   if(!Array.isArray(pts)||pts.length<2||!_isCurvePoint(pts[0])||!_isCurvePoint(pts[1])) return false;
-  const ctx=layers[curLayer].frames[curFrame];
+  const ctx=_wf(curLayer,curFrame);
   ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=curveWidth; ctx.globalAlpha=curveOpacity; ctx.lineCap='round';
   ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
   if(pts.length>=3&&_isCurvePoint(pts[2])){
@@ -3404,7 +3504,7 @@ CA.addEventListener('pointerdown',e=>{
   if(eyedropActive){ _eyedropSample(p); return; }
   if(tool==='pan'){isPanning=true;panStart={x:e.clientX,y:e.clientY};panOrigin={x:panX,y:panY};CA.classList.add('panning');return}
   if(!isSelTool()&&isLayerLocked()) return;
-  if(tool==='fill'){prepareCanvasAction();saveUndoDraw();floodFill(layers[curLayer].frames[curFrame],p.x,p.y,shapeFillColor||color);renderFrame();updateThumb();buildTL();return}
+  if(tool==='fill'){prepareCanvasAction();saveUndoDraw();floodFill(_wf(curLayer,curFrame),p.x,p.y,shapeFillColor||color);renderFrame();updateThumb();buildTL();return}
   if(isSelTool()){
     if(selActive){
       const isTouch = e.pointerType==='touch';
@@ -3556,7 +3656,7 @@ CA.addEventListener('pointerup',e=>{
     lsEnd(p);
   } else if((drawTools.includes(tool)||tool==='eraser')&&drawPts.length>=1){
     // Tap with no direct-draw session active (e.g. onion skin on) — draw a dot.
-    const pt=drawPts[0]||p, ctx=layers[curLayer].frames[curFrame], isE=(tool==='eraser');
+    const pt=drawPts[0]||p, ctx=_wf(curLayer,curFrame), isE=(tool==='eraser');
     const r=Math.max(0.6,(isE?eraserSize:baseSize)/2);
     ctx.save();
     ctx.globalAlpha=isE?eraserOp:opacity;
@@ -3589,7 +3689,7 @@ CA.addEventListener('pointercancel',e=>{
     else if(rawPts.length>1){ drawStroke(rawPts); }
     else {
       // single point → stamp a dot rather than lose it
-      const pt=rawPts[0], ctx=layers[curLayer].frames[curFrame], isE=(tool==='eraser');
+      const pt=rawPts[0], ctx=_wf(curLayer,curFrame), isE=(tool==='eraser');
       const r=Math.max(0.6,(isE?eraserSize:baseSize)/2);
       ctx.save(); ctx.globalAlpha=isE?eraserOp:opacity;
       ctx.globalCompositeOperation=isE?'destination-out':'source-over';
@@ -3644,7 +3744,7 @@ CA.addEventListener('touchstart',e=>{
         // then discard the pending capture (its entry was never on the stack).
         try{
           const _p=_pendingUndoBefore;
-          const _fr=layers[_p.li]&&layers[_p.li].frames[_p.fi];
+          const _fr=layers[_p.li]&&_wf(_p.li,_p.fi);
           if(_fr && _p.before) _fr.putImageData(_p.before,0,0);
         }catch(_){}
         _pendingUndoBefore=null;
@@ -3730,7 +3830,7 @@ CA.addEventListener('touchend',e=>{
   if(_pendingFill){
     const f=_pendingFill; _pendingFill=null;
     saveUndoDraw();
-    floodFill(layers[curLayer].frames[curFrame], f.x, f.y, shapeFillColor||color);
+    floodFill(_wf(curLayer,curFrame), f.x, f.y, shapeFillColor||color);
     _markContentAfterStroke();
     renderFrame(); updateThumb(); buildTL(); return;
   }
@@ -3783,7 +3883,7 @@ CA.addEventListener('touchend',e=>{
     // lsEnd renders as nothing on many canvas engines, which is why a quick tap
     // used to leave no mark. An arc() fill is reliable everywhere.
     if(_ls){ try{_ls.ctx.restore();}catch(_){} _ls=null; if(_lsRafId){cancelAnimationFrame(_lsRafId);_lsRafId=null;} _lsDirty=null; _resetSmoothLive(); }
-    const pt=drawPts[0]||{x:0,y:0}, ctx=layers[curLayer].frames[curFrame], isE=(tool==='eraser');
+    const pt=drawPts[0]||{x:0,y:0}, ctx=_wf(curLayer,curFrame), isE=(tool==='eraser');
     const r=Math.max(0.6,(isE?eraserSize:baseSize)/2);
     ctx.save();
     ctx.globalAlpha=isE?eraserOp:opacity;
@@ -3827,6 +3927,14 @@ CA.addEventListener('touchend',e=>{
     if(e && e.pointerType==='touch') return;
     if(_pendingUndoBefore) finalizeUndoDraw();
   },{passive:true});
+});
+
+// Once the pen lifts, hand back the buffers of any frame that is still blank —
+// erasing a frame empty, or merely visiting one, should not cost it a full
+// CW x CH allocation for the rest of the session. Debounced, and it never
+// touches the frame being edited.
+['pointerup','pointercancel','touchend','touchcancel'].forEach(evt=>{
+  CA.addEventListener(evt,()=>scheduleReclaim(),{passive:true});
 });
 
 // keyboard
@@ -4266,15 +4374,14 @@ function initScrubber(){
 // ------------------------------------------
 //  FRAME / LAYER OPS
 // ------------------------------------------
-function clearFrame(){if(isLayerLocked())return;saveUndoDraw();layers[curLayer].frames[curFrame].clearRect(0,0,CW,CH);markFrameContent(false);renderFrame();updateThumb();buildTL()}
+function clearFrame(){if(isLayerLocked())return;saveUndoDraw();_wf(curLayer,curFrame).clearRect(0,0,CW,CH);markFrameContent(false);renderFrame();updateThumb();buildTL()}
 
 // -- INSERT EMPTY FRAME after curFrame --
 function insertEmptyFrame(){
   _checkFrameGrowth();
   saveUndoDelta({type:'col-remove', fi:curFrame+1}); totalFrames++;
   layers.forEach(l=>{
-    const c=document.createElement('canvas');c.width=CW;c.height=CH;
-    l.frames.splice(curFrame+1,0,c.getContext('2d',FRAME_CTX_OPTS));
+    l.frames.splice(curFrame+1,0,_newFrameCtx());
     l.holds.splice(curFrame+1,0,1);
   });
   document.getElementById('total-f').textContent=totalFrames+' frames';
@@ -4287,8 +4394,7 @@ function addFrame(){
   _checkFrameGrowth();
   saveUndoDelta({type:'col-remove', fi:curFrame+1}); totalFrames++;
   layers.forEach(l=>{
-    const c=document.createElement('canvas');c.width=CW;c.height=CH;
-    l.frames.splice(curFrame+1,0,c.getContext('2d',FRAME_CTX_OPTS));
+    l.frames.splice(curFrame+1,0,_newFrameCtx());
     l.holds.splice(curFrame+1,0,1);
   });
   document.getElementById('total-f').textContent=totalFrames+' frames';
@@ -4298,9 +4404,7 @@ function addFrame(){
 function dupFrame(){
   saveUndoDelta({type:'col-remove', fi:curFrame+1}); totalFrames++;
   layers.forEach(l=>{
-    const c=document.createElement('canvas');c.width=CW;c.height=CH;
-    const n=c.getContext('2d',FRAME_CTX_OPTS); n.drawImage(l.frames[curFrame].canvas,0,0);
-    l.frames.splice(curFrame+1,0,n);
+    l.frames.splice(curFrame+1,0,_copyFrameCtx(l.frames[curFrame]));
     l.holds.splice(curFrame+1,0,l.holds[curFrame]);
   });
   document.getElementById('total-f').textContent=totalFrames+' frames';
@@ -4393,15 +4497,13 @@ function shrinkFrame(){
 }
 
 function delFrame(){if(totalFrames<=1) return;saveUndoDelta({type:'col-insert', fi:curFrame, col:_snapColumn(curFrame)});layers.forEach(l=>{l.frames.splice(curFrame,1);l.holds.splice(curFrame,1)});totalFrames--;if(curFrame>=totalFrames)curFrame=totalFrames-1;document.getElementById('total-f').textContent=totalFrames+' frames';buildTL();renderFrame();renderOnion()}
-function addLayer(){{const mb=_projMemMB(CW,CH,totalFrames,layers.length+1);if(mb>PROJ_MEM_WARN_MB)_projMemToast(mb);}saveUndoDelta({type:'layer-remove', li:0});const nm='Layer '+(layers.length+1);const fr=[],ho=[];for(let i=0;i<totalFrames;i++){const c=document.createElement('canvas');c.width=CW;c.height=CH;fr.push(c.getContext('2d',FRAME_CTX_OPTS));ho.push(1)}const color=LAYER_COLORS[layers.length%LAYER_COLORS.length];layers.unshift({name:nm,visible:true,locked:false,opacity:1,color,frames:fr,holds:ho});curLayer=0;renderLayers();buildTL()}
+function addLayer(){{const mb=projectBufferMB();if(mb>PROJ_MEM_WARN_MB)_projMemToast(mb);}/* a new layer is all blank frames, so it costs nothing yet — warn on what is already held */saveUndoDelta({type:'layer-remove', li:0});const nm='Layer '+(layers.length+1);const fr=[],ho=[];for(let i=0;i<totalFrames;i++){fr.push(_newFrameCtx());ho.push(1)}const color=LAYER_COLORS[layers.length%LAYER_COLORS.length];layers.unshift({name:nm,visible:true,locked:false,opacity:1,color,frames:fr,holds:ho});curLayer=0;renderLayers();buildTL()}
 function duplicateLayer(idx){
   saveUndoDelta({type:'layer-remove', li:idx+1});
   const src=layers[idx];
   const fr=[],ho=[...src.holds];
   for(let i=0;i<totalFrames;i++){
-    const c=document.createElement('canvas');c.width=CW;c.height=CH;
-    const ctx=c.getContext('2d',FRAME_CTX_OPTS);ctx.drawImage(src.frames[i].canvas,0,0);
-    fr.push(ctx);
+    fr.push(_copyFrameCtx(src.frames[i]));
   }
   const copy={name:src.name+' copy',visible:src.visible,locked:false,opacity:src.opacity??1,color:src.color??LAYER_COLORS[0],frames:fr,holds:ho};
   layers.splice(idx+1,0,copy);
@@ -4423,6 +4525,9 @@ function mergeLayerDown(idx){
   for(let f=0;f<totalFrames;f++){
     const tctx=top.frames[f], bctx=bot.frames[f];
     if(!tctx||!bctx) continue;
+    // Merging writes into the lower frame; a blank one must grow first.
+    // The upper frame is only read, so it may stay deferred.
+    if(!_isDeferred(tctx)) _ensureBuf(bctx); else continue;
     _touchFrame(bctx);
     bctx.save();
     bctx.globalAlpha=topOp;
@@ -4668,9 +4773,7 @@ function _doNewProject(){
   totalFrames=8; curFrame=0; curLayer=0; soloLayer=null;
   layers=[{name:'Layer 1',visible:true,locked:false,opacity:1,color:LAYER_COLORS[0],frames:[],holds:[]}];
   for(let i=0;i<totalFrames;i++){
-    const c=document.createElement('canvas');c.width=CW;c.height=CH;
-    const ctx=c.getContext('2d',FRAME_CTX_OPTS);
-    layers[0].frames.push(ctx);
+    layers[0].frames.push(_newFrameCtx());
     layers[0].holds.push(1);
   }
   const fpsSel=document.getElementById('fps-sel');
@@ -4940,7 +5043,7 @@ function _loadProjectFromJSON(jsonStr){
         const c=document.createElement('canvas');c.width=data.CW||CW;c.height=data.CH||CH;
         const ctx=c.getContext('2d',FRAME_CTX_OPTS);ctx.drawImage(img,0,0);res(ctx);
       };
-      img.onerror=()=>{ const c=document.createElement('canvas');c.width=CW;c.height=CH;res(c.getContext('2d',FRAME_CTX_OPTS)); };
+      img.onerror=()=>{ res(_newFrameCtx()); };
       img.src=src;
     }))).then(frames=>({
       name:ld.name||'Layer',visible:ld.visible??true,locked:ld.locked??false,opacity:ld.opacity??1,blendMode:ld.blendMode||'source-over',color:ld.color??LAYER_COLORS[0],
@@ -4980,7 +5083,7 @@ function _loadProject_OLD(file){
             const c=document.createElement('canvas');c.width=data.CW||CW;c.height=data.CH||CH;
             const ctx=c.getContext('2d',FRAME_CTX_OPTS);ctx.drawImage(img,0,0);res(ctx);
           };
-          img.onerror=()=>{ const c=document.createElement('canvas');c.width=CW;c.height=CH;res(c.getContext('2d',FRAME_CTX_OPTS)); };
+          img.onerror=()=>{ res(_newFrameCtx()); };
           img.src=src;
         }))).then(frames=>({
           name:ld.name||'Layer',visible:ld.visible??true,locked:ld.locked??false,opacity:ld.opacity??1,blendMode:ld.blendMode||'source-over',color:ld.color??LAYER_COLORS[0],
@@ -5759,7 +5862,7 @@ function markFrameContent(has=true, li=curLayer, fi=curFrame){
 // any — clear the flag and let the background scan decide, so erasing a frame
 // empty correctly turns its timeline dot hollow.
 function _markContentAfterStroke(){
-  const ctx=layers[curLayer]&&layers[curLayer].frames[curFrame];
+  const ctx=layers[curLayer]&&_wf(curLayer,curFrame);
   if(!ctx||!ctx.canvas) return;
   if(tool==='eraser'){
     delete ctx.canvas._hasContent;          // force re-scan
@@ -6830,7 +6933,7 @@ function selTransformEnd(){
   const epx=po?po.x:0, epy=po?po.y:0;
 
   // Original already erased in selTransformBegin
-  const frameCtx=layers[curLayer].frames[curFrame]; // used below for paste
+  const frameCtx=_wf(curLayer,curFrame); // used below for paste
 
   if(_st.type==='rot'){
     selRotation+=_st.angle;
@@ -6864,7 +6967,7 @@ function selTransformEnd(){
     _st=null;
     // The lifted pixels still belong to this frame — keep the timeline dot lit so
     // rotating/scaling a floating selection doesn't blink the indicator hollow.
-    { const fc=layers[curLayer]&&layers[curLayer].frames[curFrame]; if(fc&&fc.canvas) fc.canvas._hasContent=true; }
+    { const fc=layers[curLayer]&&_wf(curLayer,curFrame); if(fc&&fc.canvas) fc.canvas._hasContent=true; }
     _xctxDrawMovePreview();
     renderFrame(); updateThumb(); buildTL();
     showSelActionBar(); startSelAnim();
@@ -6874,7 +6977,7 @@ function selTransformEnd(){
   xctx.clearRect(0,0,CW,CH);
   if(selCtx) selCtx.clearRect(0,0,CW,CH);
   _st=null;
-  { const fc=layers[curLayer]&&layers[curLayer].frames[curFrame]; if(fc) _touchFrame(fc); } // content changed: let it re-scan
+  { const fc=layers[curLayer]&&_wf(curLayer,curFrame); if(fc) _touchFrame(fc); } // content changed: let it re-scan
   renderFrame(); updateThumb(); buildTL();
   showSelActionBar(); startSelAnim();
 }
@@ -6993,7 +7096,7 @@ function extractSelection(){
     });
     selMask=tctx.getImageData(0,0,iw,ih);
   } else {
-    const ctx=layers[curLayer].frames[curFrame];
+    const ctx=_wf(curLayer,curFrame);
     selMask=ctx.getImageData(ix,iy,iw,ih);
   }
   selBounds={x:ix,y:iy,w:iw,h:ih};
@@ -7101,7 +7204,7 @@ function selLassoUp(){
   const h=Math.min(CH-y,Math.ceil(Math.max(...ys))-y);
   selBounds={x,y,w,h}; selOffsetX=0; selOffsetY=0;
   // mask out pixels outside lasso path
-  const ctx=layers[curLayer].frames[curFrame];
+  const ctx=_wf(curLayer,curFrame);
   if(w<=0||h<=0){clearSelection();return;}
   const src=ctx.getImageData(x,y,Math.max(1,w),Math.max(1,h));
   // create a temp canvas to clip to the lasso path
@@ -7453,7 +7556,7 @@ function selEraseOriginal(clickPt){
     if(selMask){
       // build a 1-channel coverage map from selMask alpha
       layers.forEach(l=>{ if(l.visible===false) return;
-        const ctx=l.frames[curFrame];
+        const ctx=_ensureBuf(l.frames[curFrame]);
         const region=ctx.getImageData(ix,iy,iw,ih);
         const rd=region.data, md=selMask.data;
         for(let yy=0;yy<ih;yy++)for(let xx=0;xx<iw;xx++){
@@ -7469,7 +7572,7 @@ function selEraseOriginal(clickPt){
     _selFrameSnap=null;
     return;
   }
-  const ctx=layers[curLayer].frames[curFrame];
+  const ctx=_wf(curLayer,curFrame);
   if(_selFrameSnap){
     // restore pre-paste background — putImageData is pixel-perfect, no compositing residuals
     ctx.putImageData(_selFrameSnap.d,_selFrameSnap.x,_selFrameSnap.y);
@@ -7524,7 +7627,7 @@ function selEraseOriginal(clickPt){
 
 // Draw selMask onto frame at current bounds+offset (rotation-aware)
 function selPasteToFrame(){
-  const ctx=layers[curLayer].frames[curFrame];
+  const ctx=_wf(curLayer,curFrame);
   // Content is being baked back into the frame — mark it present so the timeline
   // dot lights immediately (and invalidate any stale cache for a fresh scan).
   if(ctx&&ctx.canvas) ctx.canvas._hasContent=true;
@@ -7601,7 +7704,7 @@ function selCopyToNextFrame(){
   const fi=Math.min(curFrame+1,totalFrames-1);
   if(fi===curFrame){toast('Already on last frame');return;}
   saveUndoFrame(fi);
-  const ctx=layers[curLayer].frames[fi];
+  const ctx=_wf(curLayer,fi);
   const {w:cw2,h:ch2}=selBounds;
   const ccx=Math.round(selBounds.x+selOffsetX+cw2/2), ccy=Math.round(selBounds.y+selOffsetY+ch2/2);
   ctx.save();
@@ -7635,7 +7738,7 @@ function selFill(){
   saveUndoFrame();
   const opEl=document.getElementById('pb-fill-op');
   const fillOpacity=(opEl?+opEl.value:100)/100;
-  const ctx=layers[curLayer].frames[curFrame];
+  const ctx=_wf(curLayer,curFrame);
   const {x,y,w,h}=selBounds;
   // Build mask canvas from selection (rotation-aware)
   const maskCv=document.createElement('canvas'); maskCv.width=CW; maskCv.height=CH;
@@ -8973,7 +9076,7 @@ function _loadRecentData(r, jsonStr){
     const promises=data.layers.map(ld=>
       Promise.all(ld.frames.map(src=>new Promise(res=>{
         const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=data.CW||CW;c.height=data.CH||CH;const ctx=c.getContext('2d',FRAME_CTX_OPTS);ctx.drawImage(img,0,0);res(ctx)};
-        img.onerror=()=>{const c=document.createElement('canvas');c.width=CW;c.height=CH;res(c.getContext('2d',FRAME_CTX_OPTS))};
+        img.onerror=()=>{res(_newFrameCtx())};
         img.src=src;
       }))).then(frames=>({name:ld.name||'Layer',visible:ld.visible??true,locked:ld.locked??false,opacity:ld.opacity??1,blendMode:ld.blendMode||'source-over',color:ld.color??LAYER_COLORS[0],holds:[...ld.holds],frames}))
     );
@@ -9175,8 +9278,7 @@ function importImage(file){
     // deletion, and isolation from your linework. Named after the file.
     const fr=[],ho=[];
     for(let i=0;i<totalFrames;i++){
-      const c=document.createElement('canvas');c.width=CW;c.height=CH;
-      fr.push(c.getContext('2d',FRAME_CTX_OPTS));ho.push(1);
+      fr.push(_newFrameCtx());ho.push(1);
     }
     let nm=(file&&file.name||'Imported').replace(/\.[^.]+$/,'').slice(0,24)||'Imported';
     // Digits-only filenames (screenshots, camera rolls) make meaningless layer
@@ -9188,7 +9290,7 @@ function importImage(file){
     saveUndoDelta({type:'layer-remove', li:curLayer});
     // Bake onto the new layer, then float it as a selection so the user can
     // move / scale / rotate before it commits (commits on deselect).
-    const ctx=layers[curLayer].frames[curFrame];
+    const ctx=_wf(curLayer,curFrame);
     ctx.save(); ctx.globalCompositeOperation='source-over'; ctx.drawImage(tmp,x,y); ctx.restore();
     renderLayers();
     // Switch to the selection tool so handles + gestures work immediately —

@@ -49,7 +49,9 @@ async function scene(page) {
   // Deterministic artwork: a fixed shape drawn straight into the layer, so the
   // baseline does not depend on pointer interpolation.
   await page.evaluate(() => {
-    const c = layers[0].frames[0];
+    // _wf() materialises the frame's buffer. Blank frames are 1x1 placeholders,
+    // so a raw layers[..].frames[..] write would land nowhere.
+    const c = _wf(0, 0);
     c.save();
     c.strokeStyle = '#1b3a6b';
     c.lineWidth = 8;
@@ -165,7 +167,7 @@ test.describe('visual', () => {
     // Ink two neighbouring frames so onion skinning has something to tint.
     await page.evaluate(() => {
       [0, 1, 2].forEach((f) => {
-        const c = layers[0].frames[f];
+        const c = _wf(0, f);
         c.save(); c.fillStyle = '#333';
         c.fillRect(CW * (0.2 + f * 0.15), CH * 0.35, CW * 0.12, CH * 0.3);
         c.restore();
