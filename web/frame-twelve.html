@@ -263,6 +263,30 @@ canvas{display:block}
 #tlhdr::-webkit-scrollbar{display:none}
 #tlhdr>*{flex-shrink:0}
 #tlhdr .hdr-right{margin-left:auto;display:flex;align-items:center;gap:5px;padding-left:8px}
+/* On a narrow screen the header overflows and the fps control is pushed off
+   the right edge — unreachable, because an auto margin sits outside the
+   scrollable extent. The frame count is the redundant part: the timeline
+   below already shows the frames. */
+/* On a phone this row is wider than the screen, and the fps control sits at
+   the far end of the overflow — off the right edge and easy to miss entirely.
+   Dropping the two redundant readouts (both restate what the timeline
+   immediately below already shows) buys most of the room back, and pinning the
+   group to the visible edge guarantees the control is reachable at any width
+   rather than only at the ones measured here. */
+@media(max-width:560px){
+  #tlhdr .hdr-right #total-f{display:none}
+  #tlhdr .hdr-right{
+    position:sticky;
+    right:0;
+    background:rgba(24,28,36,.96);
+    padding-left:8px;
+    box-shadow:-10px 0 12px rgba(24,28,36,.92);
+  }
+}
+@media(max-width:420px){
+  #tlhdr{gap:4px!important}
+  #tlhdr #fctr{display:none}
+}
 #tlhdr .ib{width:28px!important;height:28px!important;border-radius:999px!important;padding:0!important;background:rgba(255,255,255,.055)!important;border-color:rgba(255,255,255,.11)!important;color:rgba(232,238,248,.78)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.055);transition:background .12s,border-color .12s,color .12s,box-shadow .12s,transform .08s}
 #tlhdr .ib:hover{background:rgba(255,255,255,.085)!important;border-color:rgba(126,166,255,.28)!important;color:#fff!important}
 #tlhdr .ib:active{transform:scale(.94)}
@@ -948,13 +972,42 @@ let zoom=1, panX=0, panY=0, canvasRotation=0; // canvasRotation in degrees
 // The zoom level at which the canvas fits the screen. This is treated as the
 // "100%" baseline so a freshly-fitted canvas reads 100% (FlipaClip/Procreate style).
 let fitZoom=1;
-function recalcFitZoom(){
+// The tool rail floats above the canvas area rather than sitting beside it, so
+// on a narrow screen the artboard runs underneath it and the corner it covers
+// cannot be drawn on. This reports the width that is actually clear, and how
+// far the artboard must slide left to stay inside it — every fit path goes
+// through here so they cannot disagree.
+function _fitBox(){
   const ca=document.getElementById('canvas-area');
-  if(!ca) return;
+  if(!ca) return null;
   const availW=ca.clientWidth, availH=ca.clientHeight;
-  if(availW<2||availH<2) return;
-  const pad=Math.min(72, Math.max(28, Math.min(availW,availH)*0.08));
-  fitZoom=Math.min((availW-pad)/CW,(availH-pad)/CH) || 1;
+  if(availW<2||availH<2) return null;
+  let usableW=availW;
+  const rail=document.getElementById('toolrail');
+  if(rail){
+    const rr=rail.getBoundingClientRect(), cr=ca.getBoundingClientRect();
+    if(rr.width>0 && rr.height>0 && rr.bottom>cr.top && rr.top<cr.bottom){
+      usableW=Math.max(80, rr.left-cr.left-10);   // rail edge, minus a gap
+    }
+  }
+  return {availW, availH, usableW};
+}
+
+// Shrinking the fit is not enough on its own: the artboard is centred in the
+// FULL area, so it would still reach under the rail. This is the overhang to
+// correct — zero whenever the fit is height-limited, which is every wide screen.
+function _fitPanX(){
+  const box=_fitBox();
+  if(!box) return 0;
+  const overhang=(box.availW/2 + (fitZoom*CW)/2) - box.usableW;
+  return overhang>0 ? -overhang : 0;
+}
+
+function recalcFitZoom(){
+  const box=_fitBox();
+  if(!box) return;
+  const pad=Math.min(72, Math.max(28, Math.min(box.usableW,box.availH)*0.08));
+  fitZoom=Math.min((box.usableW-pad)/CW,(box.availH-pad)/CH) || 1;
   if(!(fitZoom>0)) fitZoom=1;
 }
 // Percentage shown to the user: 100% == fitted-to-screen.
@@ -2078,15 +2131,11 @@ function zoomIn(){zoom=Math.min(10,zoom*1.2);applyTransform()}
 function zoomOut(){zoom=Math.max(0.1,zoom/1.2);applyTransform()}
 function resetZoom(){zoom=1;panX=0;panY=0;canvasRotation=0;applyTransform()}
 function fitCanvas(){
-  const ca=document.getElementById('canvas-area');
-  const availW=ca.clientWidth, availH=ca.clientHeight;
-  const pad=Math.min(72, Math.max(28, Math.min(availW,availH)*0.08));
-  if(availW<2||availH<2) return; // layout not ready; a later re-fit will handle it
-  const scaleX=(availW-pad)/CW;
-  const scaleY=(availH-pad)/CH;
-  fitZoom=Math.min(scaleX,scaleY) || 1;   // the fit baseline (== 100% for display)
+  const box=_fitBox();
+  if(!box) return;              // layout not ready; a later re-fit will handle it
+  recalcFitZoom();
   zoom=fitZoom;
-  panX=0;panY=0;canvasRotation=0;
+  panX=_fitPanX(); panY=0; canvasRotation=0;
   applyTransform();
 }
 // Fit repeatedly across a few frames so it's correct even before layout settles
@@ -2108,10 +2157,11 @@ function resetZoom100(){
 function _applyOpenZoom(){
   const ca=document.getElementById('canvas-area');
   const availW=ca.clientWidth, availH=ca.clientHeight;
-  panX=0; panY=0; canvasRotation=0;
-  if(availW<2||availH<2){ zoom=1; applyTransform(); return false; }
+  panY=0; canvasRotation=0;
+  if(availW<2||availH<2){ panX=0; zoom=1; applyTransform(); return false; }
   recalcFitZoom();
   zoom=fitZoom;   // open fitted to screen — displays as 100%
+  panX=_fitPanX();
   applyTransform();
   return true;
 }
