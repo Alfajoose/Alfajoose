@@ -782,7 +782,7 @@ input::selection,textarea::selection{background:rgba(74,111,212,.85);color:#fff}
     <button id="play-btn" onclick="togglePlay()" style="background:var(--accent);border:none;color:#fff;border-radius:var(--r-sm);padding:3px 10px;cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0;display:inline-flex;align-items:center;gap:5px"><span id="picon"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 1.5l7 3.5-7 3.5V1.5z" fill="currentColor"/></svg></span><span id="plbl">Play</span></button>
     <span style="font-size:11px;color:var(--accent);min-width:26px;text-align:center;font-weight:600;flex-shrink:0" id="fctr">F1</span>
     <div style="width:1px;height:16px;background:var(--b2);flex-shrink:0;margin:0 2px"></div>
-    <button class="ib" id="add-frame-btn" onclick="addFrame()" title="Insert blank frame after current" style="border:1px solid var(--b2);border-radius:3px;padding:2px 5px;color:var(--text);display:inline-flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button class="ib" id="add-frame-btn" onclick="addFrameThisLayer()" title="Insert blank frame on this layer" style="border:1px solid var(--b2);border-radius:3px;padding:2px 5px;color:var(--text);display:inline-flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     <button class="ib" id="dup-frame-btn" onclick="dupFrame()" title="Duplicate current frame" style="border:1px solid var(--b2);border-radius:3px;padding:2px 5px;color:var(--text);display:inline-flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="4" y="1" width="7" height="7" rx="1.2"/><rect x="1" y="4" width="7" height="7" rx="1.2" fill="var(--bg)" stroke="currentColor" stroke-width="1.4"/></svg></button>
     <button class="ib" id="del-frame-btn" onclick="clearFrame()" title="Clear current frame" style="border:1px solid var(--b2);border-radius:3px;padding:2px 5px;color:var(--t3);display:inline-flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 10h8M8 3l1 1-5 5-2-2 4-4zM4 9L2 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div style="width:1px;height:16px;background:var(--b2);flex-shrink:0;margin:0 2px"></div>
@@ -4234,6 +4234,24 @@ function insertEmptyFrameThisLayer(){
   buildTL(); goTo(curFrame+1);
   toast('Empty frame added to '+(L.name||'this layer')+' only');
 }
+// Insert a blank frame on the current layer only. The header + does this; the +
+// at the end of the strip inserts a column across every layer. Same shape as
+// dupFrameThisLayer below, minus the copy, and it leans on the same
+// _syncLayerLengths() to keep the other layers a matching length.
+function addFrameThisLayer(){
+  if(isLayerLocked()){ toast('Layer is locked'); return; }
+  _checkFrameGrowth();
+  const li=curLayer;
+  saveUndoDelta({type:'layer-col-remove', li, fi:curFrame+1});
+  const L=layers[li];
+  const c=document.createElement('canvas'); c.width=CW; c.height=CH;
+  L.frames.splice(curFrame+1,0,c.getContext('2d',FRAME_CTX_OPTS));
+  L.holds.splice(curFrame+1,0,1);
+  _syncLayerLengths();
+  buildTL(); goTo(curFrame+1);
+  toast('Frame added on '+(L.name||'this layer')+' only');
+}
+
 function dupFrameThisLayer(){
   if(isLayerLocked()){ toast('Layer is locked'); return; }
   _checkFrameGrowth();
@@ -6165,7 +6183,9 @@ function buildTL(){
       tf.appendChild(cell);
     }
 
-    const add=document.createElement('div');add.className='addfc';add.textContent='+';add.onclick=addFrame;tf.appendChild(add);
+    const add=document.createElement('div');add.className='addfc';add.textContent='+';
+    add.title='Insert blank frame on all layers';
+    add.onclick=addFrame;tf.appendChild(add);
     track.appendChild(tf);tl.appendChild(track);
   });
   // Scrubber row at top of timeline
