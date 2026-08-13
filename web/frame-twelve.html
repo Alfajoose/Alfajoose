@@ -364,7 +364,7 @@ body.focus-mode #tl{background:transparent}
 body.focus-mode #scrubber-row{height:28px;background:rgba(13,22,36,.62);border-bottom:1px solid rgba(255,255,255,.07)}
 /* Focus mode: same playhead, slightly shorter tab for the 28px row. */
 body.focus-mode #scrubber-thumb::before{height:12px}
-body.focus-mode .track{height:46px;border-bottom:1px solid rgba(255,255,255,.06)}
+body.focus-mode .track{height:var(--track-h-focus,46px);border-bottom:1px solid rgba(255,255,255,.06)}
 body.focus-mode .tlbl{background:rgba(255,255,255,.035);border-right:1px solid rgba(255,255,255,.08);color:rgba(232,238,248,.62)}
 body.focus-mode .fc{width:26px;border-right:1px solid rgba(255,255,255,.055);background:rgba(255,255,255,.025)}
 body.focus-mode .fc:hover{background:rgba(74,158,255,.12)}
@@ -378,7 +378,7 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
   body.focus-mode #canvas-area{padding-bottom:clamp(126px,24vh,194px)}
   body.focus-mode #bottom{left:8px;right:8px;bottom:8px;width:auto;transform:none;border-radius:var(--r-card);max-height:36vh}
   body.focus-mode #tlhdr{padding:7px 8px}
-  body.focus-mode #tlhdr .hdr-right span{display:none}
+  body.focus-mode #tlhdr .hdr-right #total-f{display:none}  /* not every span: .fps-wrap is one too */
   body.focus-mode #tlscroll{max-height:24vh}
 }
 
@@ -636,6 +636,10 @@ input::selection,textarea::selection{background:rgba(74,111,212,.85);color:#fff}
   .fps-unit{display:none}
 
   #tlhdr .ib{width:36px!important;height:36px!important}
+  /* Focus-mode selectors are more specific than the ones below, so they have to
+     be restated here or the header snaps back to 28px. */
+  body.focus-mode #tlhdr .ib{min-height:36px!important;width:36px!important;height:36px!important}
+  body.focus-mode #play-btn{min-height:36px!important;padding:6px 14px!important}
   #tlhdr .ib svg{width:15px!important;height:15px!important}
   #play-btn{min-height:36px!important;padding:6px 14px!important;font-size:12px!important}
   #fps-btn{min-height:34px!important;font-size:12px!important}
@@ -1040,6 +1044,8 @@ function syncTLMetrics(){
   TLLBLW = compact ? 88 : 76;
   const root = document.documentElement.style;
   root.setProperty('--track-h', (compact ? 68 : 58) + 'px');
+  // Focus mode slims the timeline deliberately, but not below a usable target.
+  root.setProperty('--track-h-focus', (compact ? 58 : 46) + 'px');
 }
 syncTLMetrics();
 window.addEventListener('resize', syncTLMetrics);
