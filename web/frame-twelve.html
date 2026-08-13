@@ -1169,10 +1169,50 @@ const FRAME_CTX_OPTS={willReadFrequently:true};
 // Reads may therefore touch a deferred frame freely. WRITES must go through
 // _wf() (or call _ensureBuf first), because drawing into the 1x1 placeholder
 // would throw the stroke away.
+// Anything on a 2D context that cannot change a pixel. Everything NOT in here
+// is treated as a write, which is the safe direction to be wrong in: the cost
+// of a false positive is materialising a buffer slightly early, while the cost
+// of a false negative is a lost drawing.
+const _CTX_READS=new Set(['canvas','getImageData','measureText','isPointInPath',
+  'isPointInStroke','createImageData','createLinearGradient','createRadialGradient',
+  'createConicGradient','createPattern','getTransform','getLineDash','getContextAttributes']);
+
+/**
+ * Wrap a deferred context so that touching it in any way that could draw grows
+ * the buffer first.
+ *
+ * Routing writes through _wf() by hand is a rule, and rules get forgotten — I
+ * wrote this one and then broke it myself the same hour by handing reclaim a
+ * sampled emptiness check. This makes the mistake unrepresentable instead:
+ * a stroke into a blank frame cannot silently vanish, whatever code path
+ * reaches it.
+ *
+ * Materialising has to happen on the FIRST touch, not at the drawing call.
+ * Resizing a canvas resets its context state, so growing the buffer at fill()
+ * would discard the fillStyle, globalAlpha and transform set moments earlier.
+ * Reads pass straight through, which is what keeps rendering, onion skinning
+ * and export from materialising the whole project just by looking at it.
+ */
+function _guardDeferred(ctx){
+  if(typeof Proxy!=='function') return ctx;   // ancient WebView: lose the guard, keep the app
+  const cv=ctx.canvas;
+  const grown=()=>cv.width!==1||cv.height!==1;
+  return new Proxy(ctx,{
+    get(t,prop,recv){
+      if(!grown() && !_CTX_READS.has(prop)) _ensureBuf(t);
+      const v=Reflect.get(t,prop,t);
+      return typeof v==='function' ? v.bind(t) : v;
+    },
+    set(t,prop,val){
+      if(!grown()) _ensureBuf(t);           // fillStyle etc. precede the draw call
+      return Reflect.set(t,prop,val,t);
+    },
+  });
+}
 function _newFrameCtx(){
   const c=document.createElement('canvas');
-  c.width=1; c.height=1;              // deferred; _ensureBuf grows it on demand
-  return c.getContext('2d',FRAME_CTX_OPTS);
+  c.width=1; c.height=1;              // deferred; grows on first write
+  return _guardDeferred(c.getContext('2d',FRAME_CTX_OPTS));
 }
 function _ensureBuf(ctx){
   if(!ctx) return ctx;

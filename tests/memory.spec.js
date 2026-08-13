@@ -217,6 +217,45 @@ test.describe('lazy frame buffers', () => {
       noErrors();
     });
 
+  // The guard exists because "always write through _wf()" is a rule, and rules
+  // get forgotten. A deferred context materialises on any touch that could
+  // draw, so a stroke into a blank frame cannot silently vanish no matter which
+  // code path reaches it.
+  test('a raw write to a deferred frame still lands', async ({ page }) => {
+    const noErrors = H.watchErrors(page);
+    await H.boot(page, 'Guard');
+
+    const r = await page.evaluate(() => {
+      const c = layers[0].frames[6];        // deliberately NOT _wf()
+      c.fillStyle = '#000';
+      c.fillRect(20, 20, 100, 80);
+      const cv = layers[0].frames[6].canvas;
+      return {
+        grew: cv.width === CW,
+        painted: c.getImageData(0, 0, cv.width, cv.height).data.some((v) => v !== 0),
+      };
+    });
+    expect(r.grew, 'the buffer grew on first write').toBe(true);
+    expect(r.painted, 'the pixels landed').toBe(true);
+    noErrors();
+  });
+
+  test('reads do not materialise a deferred frame', async ({ page }) => {
+    const noErrors = H.watchErrors(page);
+    await H.boot(page, 'GuardRead');
+
+    // If reads materialised, every buildTL and export pass would undo the whole
+    // memory win, so this is as important as the write case.
+    const r = await page.evaluate(() => {
+      const c = layers[0].frames[7];
+      c.getImageData(0, 0, CW, CH);
+      void c.canvas.width;
+      return layers[0].frames[7].canvas.width === 1;
+    });
+    expect(r, 'reading left the frame deferred').toBe(true);
+    noErrors();
+  });
+
   // Reclaiming is destructive, so its emptiness check must be exact. The first
   // implementation reused _hasContentScan(), which SAMPLES every 4th pixel for
   // the timeline dots — a 1px hairline read as empty and the frame was thrown

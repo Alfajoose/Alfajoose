@@ -30,6 +30,9 @@ of that line and not the other.
 | `popups.spec.js` | Every floating panel opens fully on screen and anchored to its trigger. |
 | `layout.spec.js` | Touch target sizes, focus mode, safe-area insets, no horizontal overflow. |
 | `exports.spec.js` | All export formats deliver files; project save/load round-trips; no export shelf. |
+| `memory.spec.js` | Lazy frame buffers: every tool materialises before writing, reclaim never eats artwork. |
+| `selection.spec.js` | Marquee, lasso, delete, cut/copy/paste, flip, fill, scale, rotate, copy-to-next-frame. |
+| `visual.spec.js` | 24 pixel baselines. Local only — skipped in CI, since font rasterisation is not portable. |
 
 ## Traps worth knowing before you add a test
 
@@ -54,6 +57,19 @@ export simply does not happen and no error is raised.
 events with `pointerType: 'mouse'`; finger input goes through a separate
 `touchend` path. Use `H.inkTouch()` (CDP) for the touch path. An undo bug lived
 in the pointer path precisely because only one device was ever exercised.
+
+**A selection tightens to its content, not to the marquee you dragged.** So
+flipping a symmetric shape inside its own bounds is correctly a no-op, and a
+test that expects movement will fail against working code. Use an asymmetric
+shape.
+
+**Paste is a floating selection.** `selPaste()` does not put pixels in the
+frame; `clearSelection()` commits them. Reading the frame straight after a paste
+returns zero, which looks exactly like data loss and is not.
+
+**Writes no longer need to go through `_wf()` to be safe** — a deferred frame's
+context materialises on any touch that could draw. `_wf()` is still the clearer
+way to say "I am about to write", but forgetting it is no longer destructive.
 
 **Popup placement needs a real assertion.** `toBeVisible()` passes for a panel
 stranded at `left: 0, top: 0`, which is the exact signature of measuring a
