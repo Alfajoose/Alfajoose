@@ -544,27 +544,10 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
 #startup-recent h3.on{color:var(--text)}
 #startup-recent h3:after{content:"";position:absolute;left:50%;bottom:0;width:68px;height:3px;background:var(--accent);border-radius:99px;transform:translateX(-50%) scaleX(0);transition:transform .18s}
 #startup-recent h3.on:after{transform:translateX(-50%) scaleX(1)}
-.exp-meta{font-size:10px;color:var(--t2);font-weight:700;margin-top:2px}
 .exp-actions{display:flex;gap:6px;margin-left:auto}
 .exp-btn{width:26px;height:26px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .exp-btn.danger{color:var(--red)}
-.exp-card::before,.exp-card::after{display:none}
-.exp-card{box-shadow:0 8px 20px rgba(0,0,0,0.3)}
-#startup-exports-empty{color:var(--t2);font-size:12.5px;font-weight:700;text-align:center;padding:36px 12px}
-#export-viewer{position:fixed;inset:0;z-index:900;display:flex;align-items:center;justify-content:center}
-#ev-backdrop{position:absolute;inset:0;background:rgba(6,8,14,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-#ev-frame{position:relative;width:min(92vw,560px);max-height:88vh;display:flex;flex-direction:column;background:var(--s2);border:1px solid rgba(255,255,255,.12);border-radius:var(--r-card);box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden}
-#ev-head{display:flex;align-items:center;gap:10px;padding:12px 14px}
-#ev-name{font-size:13px;font-weight:900;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
-#ev-close{width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-#ev-media{background:#0b0e16;display:flex;align-items:center;justify-content:center;min-height:120px}
-#ev-media video,#ev-media img{max-width:100%;max-height:62vh;display:block}
-#ev-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid rgba(255,255,255,.07)}
-#ev-status{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:11px;font-weight:700;color:var(--t2);padding:0 14px;pointer-events:none}
-#ev-media{position:relative}
-#ev-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:999px;border:none;background:rgba(20,26,40,.72);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .2s;box-shadow:0 4px 18px rgba(0,0,0,.5)}
-#ev-play:active{transform:translate(-50%,-50%) scale(.94)}
-#startup-recent-list,#startup-exports-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,158px));gap:14px 14px;align-items:start;justify-content:center;width:100%}
+#startup-recent-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,158px));gap:14px 14px;align-items:start;justify-content:center;width:100%}
 .recent-card{position:relative;isolation:isolate;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;background:linear-gradient(180deg,#22252e 0%,#191b22 100%);border:1px solid rgba(255,255,255,0.10);border-radius:var(--r-card);overflow:visible;cursor:pointer;transition:border-color .16s,transform .16s,box-shadow .16s;box-shadow:0 10px 26px rgba(0,0,0,0.34)}
 .recent-card::before,.recent-card::after{content:'';position:absolute;inset:7px 7px -7px 7px;border-radius:var(--r-card);background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.055);z-index:-1;transform:rotate(-2deg);pointer-events:none}
 .recent-card::after{inset:11px 13px -12px 13px;background:rgba(74,158,255,0.055);border-color:rgba(74,158,255,0.08);transform:rotate(2.4deg)}
@@ -676,11 +659,9 @@ input::selection,textarea::selection{background:rgba(74,111,212,.85);color:#fff}
     </div>
     <div id="startup-recent">
       <div id="startup-tabs">
-        <h3 class="startup-tab on" id="startup-recent-title" onclick="setStartupTab('projects')">Projects</h3>
-        <h3 class="startup-tab" id="startup-exports-tab" onclick="setStartupTab('exports')">Videos</h3>
+        <h3 class="startup-tab on" id="startup-recent-title">Projects</h3>
       </div>
       <div id="startup-recent-list"></div>
-      <div id="startup-exports-list" style="display:none"></div>
     </div>
   </div>
   <button id="startup-fab" onclick="startupNew()" title="New project"><svg width="30" height="30" viewBox="0 0 30 30" fill="none"><path d="M15 6v18M6 15h18" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
@@ -4527,168 +4508,31 @@ function _projMemToast(mb){
   if(mb>PROJ_MEM_DANGER_MB) toast('\u26a0 ~'+Math.round(mb)+'MB of frames \u2014 this may crash on most phones. Lower the resolution or split the animation.');
   else if(mb>PROJ_MEM_WARN_MB) toast('Heads up: ~'+Math.round(mb)+'MB of frames \u2014 large projects are more stable at lower resolutions.');
 }
-// -- EXPORTS SHELF ------------------------------------------------------------
-// Every finished export (GIF / video / image / spritesheet) is recorded: a
-// small index entry in localStorage (name, kind, size, date, thumb) and the
-// blob itself in IndexedDB. The startup page's Exports tab lists them, tap to
-// re-share — all inside app storage, so no media permissions are needed.
-const EXPORTS_KEY='keela_exports', MAX_EXPORTS=30;
-function getExports(){ try{ const l=JSON.parse(localStorage.getItem(EXPORTS_KEY)||'[]'); return Array.isArray(l)?l:[]; }catch(_){ return []; } }
-function setExports(l){ try{ localStorage.setItem(EXPORTS_KEY,JSON.stringify(l)); }catch(_){ } }
-function _exportThumb(srcCanvas){
+// -- EXPORTS -----------------------------------------------------------------
+// There is deliberately no export library. dl() delivers each finished export
+// to the device gallery on the packaged app, and to the share sheet or
+// Downloads in a browser, so the file is already where the user can reach it.
+// A second in-app copy (index in localStorage + blob in IndexedDB) only
+// duplicated that, and the home screen tab that browsed it is gone. See
+// purgeLegacyExports() for the one-time cleanup of blobs left by older builds.
+//
+// Anyone who used a build with the shelf has up to 30 video blobs sitting in
+// IndexedDB with no UI left to delete them, so reclaim that space once. Runs
+// after launch so it never competes with restoring a project.
+function purgeLegacyExports(){
+  const DONE='keela_exports_purged';
+  try{ if(localStorage.getItem(DONE)) return; }catch(_){ return; }
+  let ids=[];
   try{
-    if(!srcCanvas) return '';
-    const t=document.createElement('canvas'); t.width=128; t.height=Math.max(1,Math.round(128*srcCanvas.height/srcCanvas.width));
-    const x=t.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,t.width,t.height);
-    x.drawImage(srcCanvas,0,0,t.width,t.height);
-    return t.toDataURL('image/jpeg',0.7);
-  }catch(_){ return ''; }
+    const l=JSON.parse(localStorage.getItem('keela_exports')||'[]');
+    if(Array.isArray(l)) ids=l.map(e=>e&&e.id).filter(Boolean);
+  }catch(_){ }
+  try{ localStorage.removeItem('keela_exports'); }catch(_){ }
+  const finish=()=>{ try{ localStorage.setItem(DONE,'1'); }catch(_){ } };
+  if(!_idbOK || !ids.length){ finish(); return; }
+  Promise.all(ids.map(id=>idbDel('exports', id).catch(()=>{}))).then(finish).catch(finish);
 }
-async function _recordExport(name, kind, data, thumbCanvas, thumbDataURL){
-  try{
-    let blob=data;
-    if(typeof data==='string'){ // dataURL -> Blob
-      const r=await fetch(data); blob=await r.blob();
-    }
-    const id='exp_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-    const entry={id,name,kind,size:blob.size,date:new Date().toISOString(),
-                 mime:blob.type||'', thumb:thumbDataURL||_exportThumb(thumbCanvas)};
-    if(_idbOK){
-      await idbPut('exports', id, blob);
-      const list=getExports(); list.unshift(entry);
-      const kept=list.slice(0,MAX_EXPORTS);
-      list.slice(MAX_EXPORTS).forEach(e=>idbDel('exports',e.id).catch(()=>{}));
-      setExports(kept);
-      if(typeof renderStartupExports==='function') renderStartupExports();
-    }
-  }catch(_){ /* recording is best-effort; the download itself already happened */ }
-}
-// Fullscreen in-app preview for an export. Videos get native controls with
-// loop + autoplay (muted so autoplay is never blocked; controls unmute);
-// GIFs and images render directly. Object URL is revoked on close.
-let _expViewerURL=null;
-function openExportViewer(id){
-  const entry=getExports().find(e=>e.id===id);
-  if(!entry) return;
-  idbGet('exports', id).then(blob=>{
-    if(!blob){ toast('Export data is missing'); return; }
-    closeExportViewer();
-    _expViewerURL=URL.createObjectURL(blob);
-    const ov=document.createElement('div');
-    ov.id='export-viewer';
-    ov.innerHTML=
-      '<div id="ev-backdrop"></div>'+
-      '<div id="ev-frame">'+
-        '<div id="ev-head"><span id="ev-name"></span><button id="ev-close" aria-label="Close">'+
-          '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button></div>'+
-        '<div id="ev-media"></div>'+
-        '<div id="ev-actions">'+
-          (_hasNativeGallery()?'<button class="mbtn sec" id="ev-save">Save to Gallery</button>':'')+
-          '<button class="mbtn sec" id="ev-share">Share</button>'+
-          '<button class="mbtn sec" id="ev-delete" style="color:var(--red)">Delete</button>'+
-        '</div>'+
-      '</div>';
-    document.body.appendChild(ov);
-    ov.querySelector('#ev-name').textContent=entry.name;
-    const media=ov.querySelector('#ev-media');
-    if(entry.kind==='Video'){
-      const v=document.createElement('video');
-      const status=document.createElement('div');
-      status.id='ev-status';
-      v.controls=true; v.loop=true; v.autoplay=true;
-      v.muted=true; v.playsInline=true; v.setAttribute('playsinline','');
-      // MediaRecorder output has no duration in its header (a live-recording
-      // quirk); some WebViews won't render a frame until a seek happens. The
-      // standard fix: on metadata, seek far past the end and let the element
-      // discover the real duration, then jump back to the start.
-      v.addEventListener('loadedmetadata',()=>{
-        if(v.duration===Infinity||isNaN(v.duration)){
-          const back=()=>{ v.currentTime=0; v.removeEventListener('seeked',back); v.play().catch(()=>{}); };
-          v.addEventListener('seeked',back);
-          try{ v.currentTime=1e7; }catch(_){}
-        }
-      });
-      v.addEventListener('playing',()=>{ status.textContent=''; });
-      v.addEventListener('error',()=>{
-        const codes={1:'aborted',2:'network error',3:'decode failed',4:'format not supported'};
-        status.textContent='Playback failed ('+(codes[v.error&&v.error.code]||'unknown')+', '+(entry.mime||'unknown type')+') \u2014 use Share to open it in a video app.';
-      });
-      status.textContent='Loading\u2026';
-      v.src=_expViewerURL;
-      v.load();
-      media.appendChild(v);
-      media.appendChild(status);
-      // Big central play/pause button — the native control's play button is
-      // unreliable across WebViews, and this is a far bigger touch target.
-      const playBtn=document.createElement('button');
-      playBtn.id='ev-play';
-      const _playIco='<svg width="30" height="30" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>';
-      const _pauseIco='<svg width="30" height="30" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
-      playBtn.innerHTML=_playIco;
-      const syncBtn=()=>{ playBtn.innerHTML=v.paused?_playIco:_pauseIco; playBtn.style.opacity=v.paused?'1':'0'; };
-      playBtn.onclick=ev2=>{ ev2.stopPropagation(); if(v.paused){ v.play().catch(()=>{}); } else { v.pause(); } syncBtn(); };
-      media.appendChild(playBtn);
-      v.addEventListener('play',syncBtn);
-      v.addEventListener('pause',syncBtn);
-      // Tap the video itself to toggle too.
-      v.addEventListener('click',()=>{ if(v.paused){ v.play().catch(()=>{}); } else { v.pause(); } });
-      // Try to start once there's enough data; if autoplay is blocked, the big
-      // button stays visible so the user can start it manually.
-      v.addEventListener('canplay',()=>{ status.textContent=''; v.play().then(syncBtn).catch(syncBtn); });
-      v.play().then(syncBtn).catch(syncBtn);
-    } else {
-      const img=document.createElement('img');
-      img.src=_expViewerURL; img.alt=entry.name;
-      media.appendChild(img);
-    }
-    ov.querySelector('#ev-backdrop').onclick=closeExportViewer;
-    ov.querySelector('#ev-close').onclick=closeExportViewer;
-    const saveBtn=ov.querySelector('#ev-save');
-    if(saveBtn) saveBtn.onclick=()=>saveExportToGallery(id);
-    ov.querySelector('#ev-share').onclick=()=>shareExport(id);
-    ov.querySelector('#ev-delete').onclick=()=>{ closeExportViewer(); deleteExport(id); };
-  }).catch(()=>toast('Could not open export'));
-}
-function closeExportViewer(){
-  const ov=document.getElementById('export-viewer');
-  if(ov) ov.remove();
-  if(_expViewerURL){ URL.revokeObjectURL(_expViewerURL); _expViewerURL=null; }
-}
-async function shareExport(id){
-  const entry=getExports().find(e=>e.id===id);
-  if(!entry) return;
-  try{
-    const blob=await idbGet('exports', id);
-    if(!blob){ toast('Export data is missing'); return; }
-    const file=new File([blob], entry.name, {type:blob.type||'application/octet-stream'});
-    if(navigator.canShare && navigator.canShare({files:[file]})){
-      await navigator.share({files:[file]});
-    } else {
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a'); a.href=url; a.download=entry.name; a.click();
-      setTimeout(()=>URL.revokeObjectURL(url),2000);
-    }
-  }catch(err){ if(err&&err.name!=='AbortError') toast('Could not share'); }
-}
-// Save an already-recorded export into the device gallery on demand.
-async function saveExportToGallery(id){
-  const entry=getExports().find(e=>e.id===id);
-  if(!entry) return;
-  if(!_hasNativeGallery()){ toast('Gallery save needs the installed app'); return; }
-  try{
-    const blob=await idbGet('exports', id);
-    if(!blob){ toast('Export data is missing'); return; }
-    await _saveToGallery(blob, entry.name);
-    toast('Saved to gallery');
-  }catch(_){ toast('Couldn\u2019t save to gallery'); }
-}
-function deleteExport(id){
-  const list=getExports().filter(e=>e.id!==id);
-  setExports(list);
-  if(_idbOK) idbDel('exports', id).catch(()=>{});
-  renderStartupExports();
-  toast('Export deleted');
-}
+
 function _doNewProject(){
   const nameEl=document.getElementById('np-name');
   const nextName=(nameEl?.value||'').trim();
@@ -5241,13 +5085,13 @@ function doExport(fmt,scale,bg,quality,fps){
 
   // -- Single frame PNG --
   if(fmt==='png-single'){
-    renderF(curFrame); const _pngURL=tmp.toDataURL('image/png'); dl(_pngURL,'frame_'+pad(curFrame)+'.png'); _recordExport('frame_'+pad(curFrame)+'.png','Image',_pngURL,tmp);
+    renderF(curFrame); const _pngURL=tmp.toDataURL('image/png'); dl(_pngURL,'frame_'+pad(curFrame)+'.png');
     toast('Frame '+(curFrame+1)+' exported as PNG'); return;
   }
 
   // -- Single frame JPEG --
   if(fmt==='jpg-single'){
-    renderF(curFrame); const _jpgURL=tmp.toDataURL('image/jpeg',quality); dl(_jpgURL,'frame_'+pad(curFrame)+'.jpg'); _recordExport('frame_'+pad(curFrame)+'.jpg','Image',_jpgURL,tmp);
+    renderF(curFrame); const _jpgURL=tmp.toDataURL('image/jpeg',quality); dl(_jpgURL,'frame_'+pad(curFrame)+'.jpg');
     toast('Frame '+(curFrame+1)+' exported as JPEG'); return;
   }
 
@@ -5259,7 +5103,7 @@ function doExport(fmt,scale,bg,quality,fps){
     if(bg==='white'){sc.fillStyle='#fff';sc.fillRect(0,0,sh.width,sh.height);}
     if(bg==='black'){sc.fillStyle='#000';sc.fillRect(0,0,sh.width,sh.height);}
     for(let f=0;f<totalFrames;f++){renderF(f);sc.drawImage(tmp,(f%cols)*W,Math.floor(f/cols)*H);}
-    const _shURL=sh.toDataURL('image/png'); dl(_shURL,'spritesheet.png'); _recordExport('spritesheet.png','Sheet',_shURL,sh);
+    const _shURL=sh.toDataURL('image/png'); dl(_shURL,'spritesheet.png');
     toast('Sprite sheet exported!'); return;
   }
 
@@ -5296,7 +5140,6 @@ function doExport(fmt,scale,bg,quality,fps){
       }
       const blob=new Blob([gifData],{type:'image/gif'});
       dl(URL.createObjectURL(blob),'animation.gif');
-      _recordExport('animation.gif','GIF',blob,tmp);
       toast('GIF exported!');
     })().catch(err=>{console.error(err);toast('GIF export failed');});
     return;
@@ -5358,20 +5201,17 @@ function exportVideo(W,H,fps,bgFill){
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a'); a.href=url; a.download='animation.'+ext; a.click();
     setTimeout(()=>URL.revokeObjectURL(url),2000);
-    _recordExport('animation.'+ext,'Video',blob,null,_vidThumb);
     toast('Video exported as .'+ext+'!');
   };
   toast('Exporting video…');
   try{ mr.start(); }
   catch(e){ toast('Could not start recording: '+(e.message||e)); return; }
-  let _vidThumb='';
   const holdMs=Math.max(frameMs, 60);
   (async function run(){
     try{
       await new Promise(r=>setTimeout(r,150)); // warmup: encoder live before frame 1
       for(let i=0;i<seq.length;i++){
         renderF(seq[i]);
-        if(i===0) _vidThumb=_exportThumb(rc);
         if(manualFrames){ try{ track.requestFrame(); }catch(_){} }
         await new Promise(r=>setTimeout(r, holdMs));
       }
@@ -8294,6 +8134,8 @@ window.addEventListener('resize',()=>{
 })();
 // On launch, surface crash-recovery snapshots inside the recent projects list.
 try{ if(typeof absorbRecoveryIntoRecents==='function') setTimeout(absorbRecoveryIntoRecents, 300); }catch(_){}
+// Reclaim the IndexedDB blobs the removed exports shelf left behind (once).
+try{ if(typeof purgeLegacyExports==='function') setTimeout(purgeLegacyExports, 1500); }catch(_){}
 // Flush any pending auto-backup the moment the app is backgrounded or the page is
 // being torn down — Android can kill the WebView at any time once hidden, which
 // would otherwise lose everything inside the 4s debounce window.
@@ -8311,7 +8153,6 @@ window.addEventListener('pagehide',()=>flushRecoverySnapshot());
         if(ctx&&ctx.style.display==='block'){hideCtx();return;}
         const fpsMenu=document.getElementById('fps-menu');
         if(fpsMenu&&fpsMenu.classList.contains('show')){if(typeof closeFpsMenu==='function')closeFpsMenu();else fpsMenu.classList.remove('show');return;}
-        if(document.getElementById('export-viewer')){closeExportViewer();return;}
         const mb=document.getElementById('modal-bg');
         if(mb&&mb.classList.contains('show')){closeModal();return;}
         const su=document.getElementById('startup');
@@ -8591,55 +8432,11 @@ function ensureRecentThumb(entry){
   return makeFallbackThumb(entry.name||'12');
 }
 
-let startupTab='projects';
-function setStartupTab(t){
-  if(startupGroupOpen&&t==='exports'){ startupGroupOpen=null; renderStartupRecent(); }
-  startupTab=t;
-  const pt=document.getElementById('startup-recent-title');
-  const et=document.getElementById('startup-exports-tab');
-  const pl=document.getElementById('startup-recent-list');
-  const el=document.getElementById('startup-exports-list');
-  const fab=document.getElementById('startup-fab');
-  if(pt) pt.classList.toggle('on', t==='projects');
-  if(et) et.classList.toggle('on', t==='exports');
-  if(pl) pl.style.display=t==='projects'?'grid':'none';
-  if(el) el.style.display=t==='exports'?'grid':'none';
-  if(fab) fab.style.display=t==='projects'?'':'none'; // + creates projects
-  if(t==='exports') renderStartupExports();
-}
-function _fmtBytes(b){ return b>1048576?(b/1048576).toFixed(1)+'MB':Math.max(1,Math.round(b/1024))+'KB'; }
-function renderStartupExports(){
-  const list=document.getElementById('startup-exports-list');
-  if(!list) return;
-  const items=getExports();
-  list.innerHTML='';
-  if(!items.length){
-    const d=document.createElement('div');
-    d.id='startup-exports-empty';
-    d.style.gridColumn='1/-1';
-    d.textContent='No exports yet \u2014 GIFs, videos and images you export will appear here.';
-    list.appendChild(d);
-    return;
-  }
-  items.forEach(e=>{
-    const card=document.createElement('div');
-    card.className='recent-card exp-card';
-    const th=document.createElement('div'); th.className='recent-thumb-wrap';
-    if(e.thumb){ const img=document.createElement('img'); img.className='recent-thumb'; img.src=e.thumb; th.appendChild(img); }
-    else { const f=document.createElement('div'); f.className='recent-thumb'; f.style.display='flex'; f.style.alignItems='center'; f.style.justifyContent='center'; f.style.background='rgba(255,255,255,.06)'; f.textContent=e.kind; th.appendChild(f); }
-    const info=document.createElement('div'); info.className='recent-info';
-    const tx=document.createElement('div'); tx.style.minWidth='0';
-    const nm=document.createElement('div'); nm.className='recent-name'; nm.textContent=e.name;
-    const meta=document.createElement('div'); meta.className='exp-meta';
-    meta.textContent=e.kind+' \u00b7 '+_fmtBytes(e.size)+' \u00b7 '+
-      new Date(e.date).toLocaleDateString(undefined,{day:'numeric',month:'short'});
-    tx.appendChild(nm); tx.appendChild(meta);
-    info.appendChild(tx);
-    card.appendChild(th); card.appendChild(info);
-    card.onclick=()=>openExportViewer(e.id);
-    list.appendChild(card);
-  });
-}
+// The home screen used to carry a second "Videos" tab listing past exports.
+// It was redundant: dl() already hands every export to the device gallery (or
+// the share sheet / Downloads in a browser) before any library entry is
+// written, so the tab only re-previewed files the user already had — while
+// keeping up to 30 video blobs in IndexedDB. Home is projects only now.
 function renderStartupRecent(){
   const list=document.getElementById('startup-recent-list');
   if(!list) return;
@@ -8660,8 +8457,6 @@ function renderStartupRecent(){
       // first column), leaving the title perfectly centered on its own axis.
       const oldBtn=section?section.querySelector('.startup-back-btn'):null;
       if(oldBtn) oldBtn.remove();
-      const expTab=document.getElementById('startup-exports-tab');
-      if(expTab) expTab.style.display=openGroup?'none':'';
       if(openGroup&&section){
         const backBtn=document.createElement('button');
         backBtn.type='button';
