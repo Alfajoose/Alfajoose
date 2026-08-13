@@ -86,12 +86,12 @@ select.ts{background:var(--s3);border:1px solid var(--b2);color:var(--text);bord
 #canvas-wrap{background:#fff;box-shadow:0 14px 42px rgba(0,0,0,0.38),0 0 0 1px rgba(255,255,255,0.04);touch-action:none}
 #canvas-area.pan-cur{cursor:grab}
 #canvas-area.panning{cursor:grabbing}
-#focus-exit-btn{display:none;position:absolute;top:14px;right:18px;z-index:220;width:32px;height:32px;border:1px solid var(--b2);border-radius:var(--r-ctl);background:rgba(22,22,22,0.86);color:var(--text);cursor:pointer;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,0.38)}
+#focus-exit-btn{display:none;position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:calc(18px + env(safe-area-inset-right,0px));z-index:220;width:32px;height:32px;border:1px solid var(--b2);border-radius:var(--r-ctl);background:rgba(22,22,22,0.86);color:var(--text);cursor:pointer;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,0.38)}
 #focus-exit-btn:hover{background:var(--s3);color:#fff}
 /* -- Focus-mode radial quick dial -- */
-#focus-dial{display:none;position:absolute;left:24px;bottom:var(--focus-dock,150px);z-index:215;width:60px;height:60px;touch-action:none}
+#focus-dial{display:none;position:absolute;left:calc(24px + env(safe-area-inset-left,0px));bottom:var(--focus-dock,150px);z-index:215;width:60px;height:60px;touch-action:none}
 body.focus-mode #focus-dial{display:block}
-#focus-color{display:none;position:absolute;right:24px;bottom:var(--focus-dock,150px);z-index:215;width:48px;height:48px;border-radius:50%;border:2px solid rgba(255,255,255,.7);background:#000;cursor:grab;touch-action:none;opacity:.78;transition:opacity .15s ease,transform .12s ease;box-shadow:0 6px 18px rgba(0,0,0,.34),inset 0 0 0 2px rgba(0,0,0,.4);-webkit-tap-highlight-color:transparent;padding:0}
+#focus-color{display:none;position:absolute;right:calc(24px + env(safe-area-inset-right,0px));bottom:var(--focus-dock,150px);z-index:215;width:48px;height:48px;border-radius:50%;border:2px solid rgba(255,255,255,.7);background:#000;cursor:grab;touch-action:none;opacity:.78;transition:opacity .15s ease,transform .12s ease;box-shadow:0 6px 18px rgba(0,0,0,.34),inset 0 0 0 2px rgba(0,0,0,.4);-webkit-tap-highlight-color:transparent;padding:0}
 body.focus-mode #focus-color{display:block}
 #focus-color:hover,#focus-color.awake{opacity:1}
 #focus-color:active{cursor:grabbing;transform:scale(.96)}
@@ -109,11 +109,13 @@ body.focus-mode #focus-color{display:block}
 #focus-dial.open .fdial-wedge{opacity:1;pointer-events:auto}
 .fdial-wedge:hover,.fdial-wedge:active{background:rgba(45,82,184,.9);color:#fff;border-color:rgba(146,174,255,.5)}
 .fdial-wedge.on{background:rgba(74,158,255,.95);color:#fff;border-color:#fff;box-shadow:0 0 0 2px rgba(74,158,255,.55),0 8px 20px rgba(45,82,184,.5)}
-#tool-badge{position:absolute;left:18px;top:14px;z-index:120;display:flex;align-items:center;gap:7px;min-height:28px;padding:0 10px;border:1px solid rgba(255,255,255,0.08);border-radius:var(--r-ctl);background:rgba(22,22,22,0.62);color:var(--text);font-size:11px;font-weight:700;letter-spacing:0.2px;pointer-events:none;opacity:0.82;box-shadow:0 8px 22px rgba(0,0,0,0.24)}
+#tool-badge{position:absolute;left:calc(18px + env(safe-area-inset-left,0px));top:calc(14px + env(safe-area-inset-top,0px));z-index:120;display:flex;align-items:center;gap:7px;min-height:28px;padding:0 10px;border:1px solid rgba(255,255,255,0.08);border-radius:var(--r-ctl);background:rgba(22,22,22,0.62);color:var(--text);font-size:11px;font-weight:700;letter-spacing:0.2px;pointer-events:none;opacity:0.82;box-shadow:0 8px 22px rgba(0,0,0,0.24)}
 #tool-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
 #tool-badge-desc{font-size:9px;font-weight:500;color:var(--t2);letter-spacing:0;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width: 640px){
-  #topbar{top:16px;left:50%;max-width:calc(100vw - 106px);gap:2px;padding:4px 6px;overflow:hidden}
+  /* Keep the status-bar inset from the base rule — this is the phone branch,
+     which is exactly where a notch or punch-hole exists. */
+  #topbar{top:calc(16px + env(safe-area-inset-top,0px));left:50%;max-width:calc(100vw - 106px);gap:2px;padding:4px 6px;overflow:hidden}
   #topbar .panel-grip{width:18px;min-width:18px;opacity:.38}
   #topbar .tb{min-width:28px;width:28px;height:28px;padding:0;border-radius:var(--r-sm)}
   #topbar .tb svg{width:14px;height:14px}
@@ -527,7 +529,7 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
 /* -- STARTUP -- */
 #startup{position:fixed;inset:0;z-index:10000;background:var(--bg);display:flex;align-items:flex-start;justify-content:center;flex-direction:column;transition:opacity 0.35s ease,transform 0.35s ease;color:var(--text);overflow:auto}
 #startup.hide{opacity:0;transform:scale(1.02);pointer-events:none}
-#startup-inner{display:flex;flex-direction:column;align-items:center;gap:20px;width:100%;max-width:900px;min-height:100%;padding:38px 24px 96px;margin:0 auto;box-sizing:border-box}
+#startup-inner{display:flex;flex-direction:column;align-items:center;gap:20px;width:100%;max-width:900px;min-height:100%;padding:calc(38px + env(safe-area-inset-top,0px)) calc(24px + env(safe-area-inset-right,0px)) calc(96px + env(safe-area-inset-bottom,0px)) calc(24px + env(safe-area-inset-left,0px));margin:0 auto;box-sizing:border-box}
 #startup-top{display:flex;align-items:center;justify-content:center;gap:16px;width:100%}
 #startup-brand{display:flex;flex-direction:row;align-items:center;justify-content:center;text-align:left;gap:14px;width:100%}
 #startup-brand-text{display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -588,7 +590,7 @@ body.focus-mode #audio-track-row{background:rgba(74,158,255,.06)!important;borde
 .recent-menu button.danger{color:#ff7777}
 .recent-menu button.danger:hover{background:rgba(255,74,74,.12);color:#ff9a9a}
 #startup-empty{font-size:13px;color:var(--t3);text-align:center;padding:34px 0;background:var(--s2);border:1px dashed var(--b2);border-radius:var(--r-ctl);grid-column:1/-1;font-weight:700}
-#startup-fab{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);width:64px;height:64px;border-radius:999px;border:0;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;box-shadow:0 16px 34px rgba(45,82,184,0.42);cursor:pointer;z-index:10001}
+#startup-fab{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:64px;height:64px;border-radius:999px;border:0;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;box-shadow:0 16px 34px rgba(45,82,184,0.42);cursor:pointer;z-index:10001}
 #startup-fab:hover{filter:brightness(1.05)}
 .export-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
 .export-card{background:var(--s3);border:1px solid var(--b2);border-radius:var(--r-ctl);padding:12px 8px;min-height:64px;color:var(--t2);font-weight:800;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer}
