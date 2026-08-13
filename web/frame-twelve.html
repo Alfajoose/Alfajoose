@@ -6175,16 +6175,27 @@ function initTLDrag(){
     const srcF=+cell.dataset.f;
     _tlDrag={srcF,startX:e.clientX,startY:e.clientY,active:false,armed:false,indicator:null,dropF:srcF,pid:e.pointerId,
              scrollStart:scroller?scroller.scrollLeft:0, didScroll:false};
-    // Capture immediately so we keep receiving move events even over a scroll container.
-    try{ tl.setPointerCapture(e.pointerId); }catch(_){}
+    // Capture is deliberately NOT taken here. While the pointer is captured by
+    // #tl, the browser retargets pointerup and the subsequent click to #tl, so
+    // a plain tap never reached the cell's own handler and clicking a frame did
+    // nothing. Capture is taken lazily below, once a scroll or reorder actually
+    // starts and we need moves that stray outside the scroller.
     // Arm reorder after a long-press; before that, horizontal movement scrolls.
     _tlDrag.holdTimer=setTimeout(()=>{
       if(!_tlDrag||_tlDrag.didScroll) return;
       _tlDrag.armed=true;
+      grabPointer();
       document.querySelectorAll(`[data-f="${srcF}"]`).forEach(c=>c.style.opacity='0.5');
       if(navigator.vibrate) navigator.vibrate(15);
     },350);
   });
+
+  // Take capture the moment a gesture becomes a drag or a scroll — never for a
+  // plain tap, which must keep its normal click target.
+  const grabPointer=()=>{
+    if(!_tlDrag||_tlDrag.captured) return;
+    try{ tl.setPointerCapture(_tlDrag.pid); _tlDrag.captured=true; }catch(_){}
+  };
 
   tl.addEventListener('pointermove',e=>{
     if(!_tlDrag) return;
@@ -6195,6 +6206,7 @@ function initTLDrag(){
       if(Math.abs(dx)>6||Math.abs(dy)>6){
         _tlDrag.didScroll=true;
         clearTimeout(_tlDrag.holdTimer);
+        grabPointer();
         if(scroller) scroller.scrollLeft=_tlDrag.scrollStart-dx;
       }
       return;
