@@ -21,8 +21,16 @@ on:
       - 'package.json'
 
 # A push that supersedes an in-flight run makes the older one pointless.
+#
+# github.workflow must be in the key. Build APK calls this workflow via
+# workflow_call, and with a group of just tests-<ref> that call and the
+# standalone run landed in the same group and cancelled each other — every
+# "Tests" run showed up cancelled even though the suite had actually passed
+# inside the Build APK run. A check that is always cancelled is worse than no
+# check, because people learn to ignore it. When called, github.workflow is the
+# caller's name, so the two no longer collide.
 concurrency:
-  group: tests-${{ github.ref }}
+  group: tests-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
