@@ -1188,7 +1188,7 @@
     * { box-sizing: border-box; }
     html { min-height: 100%; }
     body {
-      min-height: 100vh;
+      min-height: 100dvh;
       margin: 0;
       font-family: Inter, ui-rounded, "SF Pro Rounded", "SF Pro Display", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--text);
@@ -1264,7 +1264,7 @@
 
     .app {
       width: min(1580px, 100%);
-      min-height: 100vh;
+      min-height: 100dvh;
       margin: auto;
       padding: 22px;
       display: grid;
@@ -1284,7 +1284,7 @@
     .sidebar {
       position: sticky;
       top: 22px;
-      height: calc(100vh - 44px);
+      height: calc(100dvh - 44px);
       border-radius: var(--radius-xl);
       padding: 20px 15px;
       display: flex;
@@ -1373,12 +1373,12 @@
     /* Main shell */
     .main-shell {
       min-width: 0;
-      min-height: calc(100vh - 44px);
+      min-height: calc(100dvh - 44px);
       border-radius: var(--radius-xl);
       overflow: hidden;
       position: relative;
     }
-    .page { min-height: calc(100vh - 44px); padding: 31px 33px 120px; }
+    .page { min-height: calc(100dvh - 44px); padding: 31px 33px 120px; }
 
     .topbar {
       display: flex; align-items: center; justify-content: space-between; gap: 18px;
@@ -1619,11 +1619,11 @@
       align-items:start;
     }
     .paper {
-      min-height: calc(100vh - 155px);
+      min-height: calc(100dvh - 155px);
       border-radius:29px;
       padding:31px;
       background:var(--editor-paper);
-      color:#071334;
+      color:var(--editor-ink, #071334);
       box-shadow:var(--soft-shadow);
       border:1px solid rgba(3,4,94,.08);
       overflow:hidden;
@@ -1647,13 +1647,13 @@
     .note-title-input {
       position:relative; z-index:1;
       width:100%; border:0; outline:0; background:transparent;
-      color:#071334; font-weight:900; font-size:clamp(30px,4vw,50px);
+      color:var(--editor-ink, #071334); font-weight:900; font-size:clamp(30px,4vw,50px);
       letter-spacing:-.05em; margin-bottom:12px;
     }
     .note-subline {
       position:relative; z-index:1;
       display:flex; gap:8px; align-items:center; flex-wrap:wrap;
-      color:rgba(7,19,52,.47); font-size:12px; margin-bottom:18px;
+      color:color-mix(in srgb, var(--editor-ink, #071334) 55%, transparent); font-size:12px; margin-bottom:18px;
     }
     .tag-pill {
       padding:5px 9px; border-radius:99px; background:rgba(0,180,216,.13); color:var(--blue);
@@ -1661,11 +1661,11 @@
     }
     .rich-editor {
       position:relative; z-index:1;
-      min-height:calc(100vh - 330px);
+      min-height:calc(100dvh - 330px);
       outline:0; line-height:32px; font-size:16px;
       overflow-wrap:anywhere;
     }
-    .rich-editor:empty::before { content:attr(data-placeholder); color:rgba(7,19,52,.34); }
+    .rich-editor:empty::before { content:attr(data-placeholder); color:color-mix(in srgb, var(--editor-ink, #071334) 40%, transparent); }
     .rich-editor img {
       display:block; max-width:100%; max-height:480px; object-fit:contain;
       margin:14px 0; border-radius:18px; box-shadow:0 10px 25px rgba(3,4,94,.12);
@@ -1688,11 +1688,11 @@
       display:table; clear:both; table-layout:auto;
     }
     .rich-editor td, .rich-editor th {
-      border:1px solid rgba(3,4,94,.22); min-width:88px; padding:9px; vertical-align:top;
+      border:1px solid color-mix(in srgb, var(--editor-ink, #03045E) 25%, transparent); min-width:88px; padding:9px; vertical-align:top;
       word-break:normal; overflow-wrap:break-word;
       background:var(--editor-paper);
     }
-    .rich-editor th { font-weight:800; text-align:left; background:rgba(202,240,248,.62); }
+    .rich-editor th { font-weight:800; text-align:left; background:color-mix(in srgb, var(--cyan) 22%, var(--editor-paper)); }
     .rich-editor { position:relative; z-index:1; }
     .rich-editor p { margin:0; min-height:32px; }
     .rich-editor h1 { font-size:26px; line-height:64px; margin:0; }
@@ -1702,7 +1702,7 @@
     .rich-editor li { line-height:32px; }
     .rich-editor blockquote {
       border-left:4px solid var(--cyan); margin:14px 0; padding:9px 14px;
-      color:rgba(7,19,52,.70); background:rgba(202,240,248,.48); border-radius:0 12px 12px 0;
+      color:color-mix(in srgb, var(--editor-ink, #071334) 78%, transparent); background:color-mix(in srgb, var(--cyan) 16%, var(--editor-paper)); border-radius:0 12px 12px 0;
     }
     .rich-editor .checkline {
       position:relative; margin:0; clear:both; width:100%;
@@ -1882,8 +1882,8 @@
     @media (max-width: 1020px) {
       :root { --sidebar-w: 215px; }
       .app { padding:14px; gap:14px; }
-      .sidebar { top:14px; height:calc(100vh - 28px); }
-      .page, .main-shell { min-height:calc(100vh - 28px); }
+      .sidebar { top:14px; height:calc(100dvh - 28px); }
+      .page, .main-shell { min-height:calc(100dvh - 28px); }
       .page { padding:25px 24px 115px; }
       .feature-banner { grid-template-columns:1fr 210px; }
       .banner-stack { transform:scale(.82); transform-origin:right center; }
@@ -1895,8 +1895,8 @@
       body { background:linear-gradient(150deg,#f9feff,#e4f8fc); }
       .app { display:block; padding:0; }
       .sidebar { display:none; }
-      .main-shell { min-height:100vh; border-radius:0; box-shadow:none; border:0; background:transparent; }
-      .page { min-height:100vh; padding:20px 15px 115px; }
+      .main-shell { min-height:100dvh; border-radius:0; box-shadow:none; border:0; background:transparent; }
+      .page { min-height:100dvh; padding:20px 15px 115px; }
       .topbar { align-items:flex-start; }
       .title h1 { font-size:39px; max-width:360px; }
       .title p { font-size:13px; }
@@ -1914,9 +1914,9 @@
       .editor-page { padding-bottom:95px; }
       .editor-header { align-items:flex-start; }
       .editor-actions .save-state { display:none; }
-      .paper { min-height:calc(100vh - 190px); border-radius:24px; padding:21px; }
+      .paper { min-height:calc(100dvh - 190px); border-radius:24px; padding:21px; }
       .note-title-input { font-size:36px; }
-      .rich-editor { min-height:calc(100vh - 315px); }
+      .rich-editor { min-height:calc(100dvh - 315px); }
       .inspector { grid-template-columns:1fr; }
       .format-toolbar {
         left:10px; right:10px; bottom:78px;
@@ -2144,11 +2144,11 @@
     }
     .paper {
       width: 100%;
-      min-height: calc(100vh - 125px);
+      min-height: calc(100dvh - 125px);
       padding: clamp(25px, 4vw, 48px);
       border-radius: 31px;
     }
-    .rich-editor { min-height: calc(100vh - 315px); padding-bottom: 90px; }
+    .rich-editor { min-height: calc(100dvh - 315px); padding-bottom: 90px; }
     .inspector { display: none !important; }
 
     .editor-quick-btn {
@@ -2201,7 +2201,7 @@
     }
     .modal.bottom-sheet {
       width: min(680px, 100%);
-      max-height: min(760px, calc(100vh - 28px));
+      max-height: min(760px, calc(100dvh - 28px));
       border-radius: 28px 28px 23px 23px;
       padding: 10px 18px 20px;
       animation: sheetUp .26s cubic-bezier(.2,.8,.2,1) both;
@@ -2293,8 +2293,8 @@
       padding: 13px;
       border: 1px solid rgba(3,4,94,.12);
       border-radius: 16px;
-      background: rgba(202,240,248,.45);
-      color: #071334;
+      background: color-mix(in srgb, var(--cyan) 18%, var(--editor-paper));
+      color: var(--editor-ink, #071334);
       text-decoration: none;
     }
     .generic-file i { font-size: 25px; color: var(--blue); }
@@ -2304,8 +2304,8 @@
       .editor-page { padding: 12px 10px 86px; }
       .editor-header { top: 7px; width: 100%; margin-bottom: 9px; }
       .editor-actions .save-state { display: none; }
-      .paper { min-height: calc(100vh - 88px); border-radius: 25px; padding: 24px 20px; }
-      .rich-editor { min-height: calc(100vh - 260px); padding-bottom: 100px; }
+      .paper { min-height: calc(100dvh - 88px); border-radius: 25px; padding: 24px 20px; }
+      .rich-editor { min-height: calc(100dvh - 260px); padding-bottom: 100px; }
       .format-toolbar { bottom: 15px; }
       .action-grid { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
       .sheet-action { min-height: 79px; border-radius: 17px; font-size: 11px; }
@@ -3905,11 +3905,13 @@
       if (note.paper !== "plain") paper.classList.add(note.paper || "lined");
 
       const color = note.color || "ice";
-      const bg = color === "navy" ? "#eefbff" :
-                 color === "blue" ? "#effaff" :
-                 color === "cyan" ? "#f0fdff" :
-                 color === "sky" ? "#f5fdff" : "#ffffff";
-      paper.style.setProperty("--editor-paper", bg);
+      // The paper tint has to follow the theme; a white sheet in dark mode
+      // defeats the point of dark mode in the one screen you actually read.
+      const dark = document.body.classList.contains("dark");
+      const light = { navy: "#eefbff", blue: "#effaff", cyan: "#f0fdff", sky: "#f5fdff", ice: "#ffffff" };
+      const night = { navy: "#0b1a30", blue: "#0a1b2f", cyan: "#081c2b", sky: "#0a1d2c", ice: "#0c1c30" };
+      paper.style.setProperty("--editor-paper", (dark ? night : light)[color] || (dark ? "#0c1c30" : "#ffffff"));
+      paper.style.setProperty("--editor-ink", dark ? "#eaf5ff" : "#071334");
 
       document.querySelectorAll(".swatch").forEach(s => s.classList.toggle("active", s.dataset.color === color));
       document.querySelectorAll(".paper-option").forEach(b => b.classList.toggle("active", b.dataset.paper === (note.paper || "lined")));
@@ -3966,7 +3968,9 @@
     function collectEditorIntoNote() {
       const note = currentNote();
       if (!note) return null;
-      note.title = noteTitle.value.trim() || "Untitled note";
+      // Keep the title empty rather than baking the placeholder into the data,
+      // so reopening an untitled note shows a placeholder, not literal text.
+      note.title = noteTitle.value.trim();
       note.body = richEditor.innerHTML.replace(/\u200B/g, "");
       note.folder = folderSelect.value || folders[0];
       note.tag = (tagInput.value.trim() || "note").replace(/^#/,"");
@@ -3974,15 +3978,37 @@
       return note;
     }
 
+    // A note the user opened and left completely untouched is not worth keeping.
+    function noteIsEmpty(note) {
+      return note && !note.title.trim() && !stripHtml(note.body) &&
+        !/<(img|audio|table|input|a\b)/i.test(note.body || "");
+    }
+
+    let saveRetries = 0;
+
     async function saveActive(showMessage = false) {
       const note = collectEditorIntoNote();
       if (!note) return;
-      document.getElementById("saveState").textContent = "Saving…";
+      const saveState = document.getElementById("saveState");
+      saveState.textContent = "Saving…";
       try {
         await dbPut(note);
+        saveRetries = 0;
       } catch (err) {
-        document.getElementById("saveState").textContent = "Save failed — retrying…";
-        // Retry once shortly; if storage is momentarily busy this recovers.
+        // Quota is permanent — the old code retried it every 1.5s forever.
+        if (err && err.name === "QuotaExceededError") {
+          saveRetries = 0;
+          saveState.textContent = "Not saved — storage full";
+          showToast("Storage is full. Remove some attachments to keep editing.");
+          return;
+        }
+        if (++saveRetries > 3) {
+          saveRetries = 0;
+          saveState.textContent = "Not saved";
+          showToast("Could not save this note.");
+          return;
+        }
+        saveState.textContent = "Save failed — retrying…";
         clearTimeout(saveTimer);
         saveTimer = setTimeout(() => saveActive(false), 1500);
         return;
@@ -3990,11 +4016,27 @@
       const idx = notes.findIndex(n => n.id === note.id);
       if (idx === -1) notes.unshift(note);
       else notes[idx] = note;
-      document.getElementById("saveState").textContent = "All changes saved";
+      saveState.textContent = "All changes saved";
       document.getElementById("editedLabel").textContent = "Edited just now";
       tagDisplay.textContent = "#" + note.tag;
       updateAttachmentCount();
       if (showMessage) showToast("Note saved");
+    }
+
+    // Leaving the editor: persist, or discard a note that was never written to.
+    // Previously every abandoned tap on the FAB left an "Untitled note" behind.
+    async function leaveEditor(showMessage = false) {
+      const note = currentNote();
+      if (!note) return;
+      clearTimeout(saveTimer);
+      if (noteIsEmpty(collectEditorIntoNote())) {
+        notes = notes.filter(n => n.id !== note.id);
+        try { await dbDelete(note.id); } catch (_) {}
+        activeNoteId = null;
+        return;
+      }
+      await saveActive(showMessage);
+      activeNoteId = null;
     }
 
     function scheduleSave() {
@@ -4108,7 +4150,9 @@
        Attachments
     ------------------------------ */
     async function handleImages(files) {
+      const targetNoteId = activeNoteId;
       for (const file of files) {
+        if (activeNoteId !== targetNoteId) return;   // user navigated away mid-read
         const data = await fileToDataURL(file);
         insertHTML(`<figure contenteditable="false"><img src="${data}" alt="${escapeHtml(file.name)}"><figcaption>${escapeHtml(file.name)}</figcaption></figure><p><br></p>`);
       }
@@ -4116,7 +4160,9 @@
     }
 
     async function handleAudio(files) {
+      const targetNoteId = activeNoteId;
       for (const file of files) {
+        if (activeNoteId !== targetNoteId) return;   // user navigated away mid-read
         const data = await fileToDataURL(file);
         insertHTML(`<div contenteditable="false"><audio controls src="${data}"></audio><div style="font-size:12px;opacity:.58">${escapeHtml(file.name)}</div></div><p><br></p>`);
       }
@@ -4125,11 +4171,19 @@
 
 
     async function handleGenericFiles(files) {
+      const targetNoteId = activeNoteId;
       for (const file of files) {
+        if (activeNoteId !== targetNoteId) return;   // user navigated away mid-read
         const data = await fileToDataURL(file);
         insertHTML(`<a class="generic-file" contenteditable="false" href="${data}" download="${escapeHtml(file.name)}"><i class="ph-duotone ph-file" aria-hidden="true"></i><span>${escapeHtml(file.name)}</span></a><p><br></p>`);
       }
       showToast(`${files.length} file${files.length === 1 ? "" : "s"} attached`);
+    }
+
+    function resetRecordButton(control) {
+      if (!control) return;
+      control.classList.remove("recording");
+      control.innerHTML = icon("plus", "bold");
     }
 
     async function startRecording() {
@@ -4143,19 +4197,24 @@
           return;
         }
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Remember which note this belongs to: insertHTML always targets the
+        // live editor, so navigating away mid-recording used to misfile the clip.
+        const recordingNoteId = activeNoteId;
         mediaChunks = [];
         mediaRecorder = new MediaRecorder(stream);
         mediaRecorder.ondataavailable = e => mediaChunks.push(e.data);
         mediaRecorder.onstop = async () => {
           const blob = new Blob(mediaChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+          const recordingControl = document.getElementById("editorAddBtn");
+          stream.getTracks().forEach(t => t.stop());
+          if (activeNoteId !== recordingNoteId) {
+            resetRecordButton(recordingControl);
+            showToast("Recording discarded — you left the note");
+            return;
+          }
           const data = await fileToDataURL(blob);
           insertHTML(`<div contenteditable="false"><audio controls src="${data}"></audio><div style="font-size:12px;opacity:.58">Recorded audio · ${new Date().toLocaleTimeString()}</div></div><p><br></p>`);
-          const recordingControl = document.getElementById("editorAddBtn");
-          if (recordingControl) {
-            recordingControl.classList.remove("recording");
-            recordingControl.innerHTML = icon("plus", "bold");
-          }
-          stream.getTracks().forEach(t => t.stop());
+          resetRecordButton(recordingControl);
           showToast("Recording added");
         };
         mediaRecorder.start();
@@ -4591,10 +4650,10 @@
     document.getElementById("backBtn").onclick = async () => {
       savedRange = null;
       formatToolbar.classList.add("hidden");
-      await saveActive(false); showView("home"); renderNotes();
+      await leaveEditor(false); showView("home"); renderNotes();
     };
     document.getElementById("doneBtn").onclick = async () => {
-      await saveActive(true); showView("home"); renderNotes();
+      await leaveEditor(true); showView("home"); renderNotes();
     };
 
     [noteTitle, richEditor, folderSelect, tagInput].forEach(el => el.addEventListener("input", scheduleSave));
@@ -4690,7 +4749,7 @@
     document.getElementById("duplicateBtn").onclick = async () => {
       await saveActive(false);
       const note = currentNote(); if (!note) return;
-      const copy = {...note, id:Date.now(), title:note.title + " copy", pinned:false, locked:false, lockHash:"", groupId:null, createdAt:Date.now(), updatedAt:Date.now()};
+      const copy = {...note, id:Date.now(), title:(note.title || "Untitled note") + " copy", pinned:false, locked:false, lockHash:"", groupId:null, createdAt:Date.now(), updatedAt:Date.now()};
       notes.unshift(copy); await dbPut(copy); loadEditor(copy); showToast("Note duplicated");
     };
 
@@ -4758,6 +4817,8 @@
     function toggleDark() {
       document.body.classList.toggle("dark");
       localStorage.setItem("np_dark", document.body.classList.contains("dark") ? "1" : "0");
+      const note = currentNote();
+      if (note) applyPaperStyle(note);   // repaint the open sheet for the new theme
     }
     document.getElementById("settingsDarkBtn").onclick = toggleDark;
 
@@ -4844,10 +4905,13 @@
       try {
         await openDB();
         notes = await dbGetAll();
-        if (!notes.length) {
+        // Seed once, not every time the library happens to be empty — otherwise
+        // deleting every note brings the demo content straight back on reload.
+        if (!notes.length && !localStorage.getItem("np_seeded")) {
           notes = demoNotes;
           for (const note of notes) await dbPut(note);
         }
+        localStorage.setItem("np_seeded", "1");
       } catch (err) {
         alert("This browser could not start local storage. Try Chrome, Edge or Safari.");
         notes = demoNotes;
