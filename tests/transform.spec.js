@@ -82,8 +82,12 @@ async function selected(page) {
   await page.waitForTimeout(150);
 
   await page.evaluate(() => { tool = 'sel-rect'; });
-  const a = await toClient(page, 0.22 * 960, 0.24 * 540);
-  const b = await toClient(page, 0.62 * 960, 0.72 * 540);
+  // Fractions of the real canvas, not of 960x540: the default canvas is now
+  // device-aware, so a phone project is 720x1280 and hardcoded dimensions put
+  // the marquee off the artwork entirely.
+  const dims = await page.evaluate(() => ({ CW, CH }));
+  const a = await toClient(page, 0.22 * dims.CW, 0.24 * dims.CH);
+  const b = await toClient(page, 0.62 * dims.CW, 0.72 * dims.CH);
   await page.mouse.move(a.x, a.y);
   await page.mouse.down();
   await page.mouse.move((a.x + b.x) / 2, (a.y + b.y) / 2, { steps: 5 });
@@ -133,7 +137,8 @@ test.describe('transform handles', () => {
       expect.arrayContaining(['tl', 'tr', 'bl', 'br', 'rot', 'pivot']));
 
     // Every handle must be inside the canvas or it cannot be grabbed.
-    const off = hs.filter((h) => h.x < 0 || h.y < 0 || h.x > 960 || h.y > 540);
+    const dims = await page.evaluate(() => ({ CW, CH }));
+    const off = hs.filter((h) => h.x < 0 || h.y < 0 || h.x > dims.CW || h.y > dims.CH);
     expect(off.map((h) => h.id), 'no handle is off-canvas').toEqual([]);
     noErrors();
   });

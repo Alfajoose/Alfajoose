@@ -4700,19 +4700,39 @@ function newProject(){
   if(modalOkBtn) modalOkBtn.textContent='Create';
   const projectLabel=_newFromStartup?'':((projectName&&projectName.trim())||'');
   const projectLabelAttr=projectLabel.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+
+  // Preselect a canvas that suits the screen you are holding.
+  //
+  // The default was always Wide 960x540. On a phone held upright that is the
+  // worst possible shape: measured on a 412x915 device it renders at 298x168 —
+  // 13% of the screen, with roughly 590px of dead space above and below — and a
+  // first-time user draws in a letterbox never knowing a better option was one
+  // tap away in this very dialog.
+  //
+  // Tall 720x1280 rather than the existing Phone 1080x1920: both fill about 42%
+  // of the screen (the width is the binding constraint, so the extra pixels buy
+  // no visible area), but 1080x1920 costs 7.9MB per drawn frame against 3.5MB,
+  // and its projected 949MB for a 60-frame two-layer animation trips the
+  // "may crash on most phones" warning on every single new project. Same
+  // drawing area, a third of the memory, no false alarm.
+  const _portrait = window.innerHeight > window.innerWidth * 1.1;
+  const defSize = _portrait ? '720x1280' : '960x540';
+  const sizeSel = v => v===defSize ? ' on' : '';
+
   document.getElementById('modal-body').innerHTML=`
     <div class="create-section" style="margin-top:0">Project Name</div>
     <input id="np-name" class="create-name" type="text" maxlength="60" value="${projectLabelAttr}" placeholder="Project name" oninput="this.classList.remove('err')" onkeydown="if(event.key==='Enter'){event.preventDefault();modalOk()}">
-    <input type="hidden" id="np-size" value="960x540">
+    <input type="hidden" id="np-size" value="${defSize}">
     <input type="hidden" id="np-fps" value="12">
     <input type="hidden" id="np-bg" value="white">
     <div class="create-section">Canvas Size</div>
     <div class="create-grid" data-create-group="np-size">
-      <button type="button" class="create-card on" data-value="960x540" onclick="npSelectValue(this)"><span class="cc-glyph"><i style="width:24px;height:13px"></i></span><span class="cc-txt">Wide<span>960 x 540</span></span></button>
-      <button type="button" class="create-card" data-value="1280x720" onclick="npSelectValue(this)"><span class="cc-glyph"><i style="width:24px;height:13px"></i></span><span class="cc-txt">HD<span>1280 x 720</span></span></button>
-      <button type="button" class="create-card" data-value="1080x1920" onclick="npSelectValue(this)"><span class="cc-glyph"><i style="width:13px;height:23px"></i></span><span class="cc-txt">Phone<span>1080 x 1920</span></span></button>
-      <button type="button" class="create-card" data-value="1080x1080" onclick="npSelectValue(this)"><span class="cc-glyph"><i style="width:19px;height:19px"></i></span><span class="cc-txt">Square<span>1080 x 1080</span></span></button>
-      <button type="button" class="create-card" data-value="1920x1080" onclick="npSelectValue(this)"><span class="cc-glyph"><i style="width:24px;height:13px"></i></span><span class="cc-txt">Full HD<span>1920 x 1080</span></span></button>
+      <button type="button" class="create-card${sizeSel('960x540')}" data-value="960x540" onclick="npSelectValue(this)"><span class="cc-glyph"><i style="width:24px;height:13px"></i></span><span class="cc-txt">Wide<span>960 x 540</span></span></button>
+      <button type="button" class="create-card${sizeSel('1280x720')}" data-value="1280x720" onclick="npSelectValue(this)"><span class="cc-glyph"><i style="width:24px;height:13px"></i></span><span class="cc-txt">HD<span>1280 x 720</span></span></button>
+      <button type="button" class="create-card${sizeSel('720x1280')}" data-value="720x1280" onclick="npSelectValue(this)"><span class="cc-glyph"><i style="width:13px;height:23px"></i></span><span class="cc-txt">Tall<span>720 x 1280</span></span></button>
+      <button type="button" class="create-card${sizeSel('1080x1920')}" data-value="1080x1920" onclick="npSelectValue(this)"><span class="cc-glyph"><i style="width:13px;height:23px"></i></span><span class="cc-txt">Phone<span>1080 x 1920</span></span></button>
+      <button type="button" class="create-card${sizeSel('1080x1080')}" data-value="1080x1080" onclick="npSelectValue(this)"><span class="cc-glyph"><i style="width:19px;height:19px"></i></span><span class="cc-txt">Square<span>1080 x 1080</span></span></button>
+      <button type="button" class="create-card${sizeSel('1920x1080')}" data-value="1920x1080" onclick="npSelectValue(this)"><span class="cc-glyph"><i style="width:24px;height:13px"></i></span><span class="cc-txt">Full HD<span>1920 x 1080</span></span></button>
       <button type="button" class="create-card" data-value="custom" onclick="npSelectValue(this)"><span class="cc-glyph custom"><i style="width:20px;height:20px"></i></span><span class="cc-txt">Custom<span>Set width and height</span></span></button>
     </div>
     <div id="np-custom" class="create-custom">

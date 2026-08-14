@@ -266,18 +266,37 @@ test.describe('selection', () => {
     noErrors();
   });
 
-  test('filling a selection paints inside it and not outside', async ({ page }) => {
+  test('filling a selection recolours the selected pixels', async ({ page }) => {
     const noErrors = H.watchErrors(page);
     await H.boot(page, 'SelFill');
-    await block(page, 0.15, 0.15, 0.15, 0.15);
-    await marquee(page, 0.10, 0.10, 0.45, 0.45);
-    const before = await inkCount(page);
+    await block(page, 0.18, 0.18, 0.24, 0.18);
 
+    // selFill() clips the colour to selMaskToCanvas() — the SELECTED PIXELS,
+    // not the bounding rectangle. So it recolours artwork rather than flooding
+    // a region, and asserting that the pixel COUNT grows tests the wrong thing:
+    // filling black ink with black is correctly a no-op.
+    const countRed = () => page.evaluate(() => {
+      const c = layers[curLayer].frames[curFrame], cv = c.canvas;
+      const d = c.getImageData(0, 0, cv.width, cv.height).data;
+      let n = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] > 8 && d[i] > 180 && d[i + 1] < 90 && d[i + 2] < 90) n++;
+      }
+      return n;
+    });
+    const before = await inkCount(page);
+    expect(await countRed(), 'nothing is red to begin with').toBe(0);
+
+    await marquee(page, 0.10, 0.10, 0.60, 0.60);
+    await page.evaluate(() => { color = '#ff2222'; });
     await page.evaluate(() => selFill());
     await page.waitForTimeout(400);
 
-    expect(await inkCount(page), 'the fill added pixels').toBeGreaterThan(before);
-    expect(await inkIn(page, 0.80, 0.80, 0.15, 0.15), 'nothing leaked outside').toBe(false);
+    expect(await countRed(), 'the selected artwork took the new colour')
+      .toBeGreaterThan(before * 0.8);
+    expect(await inkCount(page), 'recolouring does not add or remove pixels')
+      .toBeGreaterThan(before * 0.9);
+    expect(await inkIn(page, 0.80, 0.80, 0.15, 0.15), 'nothing painted outside').toBe(false);
     noErrors();
   });
 
