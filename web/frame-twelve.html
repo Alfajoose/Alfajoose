@@ -322,10 +322,10 @@ canvas{display:block}
 #scrubber-row.scrubbing #scrubber-thumb{width:3px;background:#fff}
 #scrubber-row.scrubbing #scrubber-thumb::before{background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.55)}
 .track{display:flex;align-items:center;height:var(--track-h);border-bottom:1px solid rgba(74,158,255,0.10)}
-.tlbl{width:var(--tl-lbl-w,76px);padding:0 4px 0 8px;font-size:9px;color:var(--t2);flex-shrink:0;border-right:1px solid rgba(74,158,255,0.14);background:#101827;display:flex;align-items:center;gap:3px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tlbl{width:var(--tl-lbl-w,76px);padding:0 4px 0 8px;font-size:10.5px;font-weight:700;letter-spacing:.1px;color:#c8cfdc;flex-shrink:0;border-right:1px solid rgba(74,158,255,0.14);background:#101827;display:flex;align-items:center;gap:3px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .tlbl:hover{background:rgba(74,158,255,0.12)}
 .tlbl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
-.tlbl-caret{flex-shrink:0;opacity:.55}
+.tlbl-caret{flex-shrink:0;opacity:.9}
 #layer-dropdown{display:none;position:fixed;width:228px;max-height:min(60vh,360px);overflow-y:auto;background:rgba(31,33,37,.96);border:1px solid rgba(255,255,255,.12);border-radius:var(--r-card);z-index:470;padding:5px;box-shadow:0 16px 38px rgba(0,0,0,.42);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 #layer-dropdown.show{display:block}
 .ld-item{display:flex;align-items:center;gap:9px;padding:7px;border-radius:var(--r-sm);cursor:pointer;font-size:12px;color:var(--text);position:relative}
@@ -384,7 +384,7 @@ body.focus-mode #scrubber-row{height:28px;background:rgba(13,22,36,.62);border-b
 /* Focus mode: same playhead, slightly shorter tab for the 28px row. */
 body.focus-mode #scrubber-thumb::before{height:12px}
 body.focus-mode .track{height:var(--track-h-focus,46px);border-bottom:1px solid rgba(255,255,255,.06)}
-body.focus-mode .tlbl{background:rgba(255,255,255,.035);border-right:1px solid rgba(255,255,255,.08);color:rgba(232,238,248,.62)}
+body.focus-mode .tlbl{background:rgba(255,255,255,.035);border-right:1px solid rgba(255,255,255,.08);color:rgba(232,238,248,.86)}
 body.focus-mode .fc{width:26px;border-right:1px solid rgba(255,255,255,.055);background:rgba(255,255,255,.025)}
 body.focus-mode .fc:hover{background:rgba(74,158,255,.12)}
 body.focus-mode .fc.hc .dot{width:8px;height:8px;background:#a8ff3d;box-shadow:0 0 12px rgba(168,255,61,.44)}
@@ -694,8 +694,8 @@ input::selection,textarea::selection{background:rgba(74,111,212,.85);color:#fff}
   /* Width comes from --tl-lbl-w (syncTLMetrics), not a literal: the scrubber
   gutter and every getFrameX() offset are derived from the same TLLBLW, and
   a second copy here is exactly how the ruler drifted 16px off the cells. */
-  .tlbl{font-size:11px;gap:5px}
-  .tlbl svg{width:11px;height:11px}
+  .tlbl{font-size:12.5px;gap:5px}
+  .tlbl svg{width:12px;height:12px}
   /* The timeline header, tool rail and frame cells were all enlarged for touch,
   but the top bar was missed: undo, redo, projects, export, grid and focus
   stayed 28x28 — the smallest targets in the app and the only ones still
@@ -6331,7 +6331,7 @@ function buildTL(){
     const track=document.createElement('div');track.className='track';
     const lbl=document.createElement('div');lbl.className='tlbl';lbl.style.borderLeft=`3px solid ${layer.color??LAYER_COLORS[0]}`;
     lbl.style.background='rgba(74,158,255,0.16)';lbl.style.color='#dce6f5';
-    lbl.innerHTML=`<span class="tlbl-name">${escHtml(layer.name)}${layer.locked?' <svg width="9" height="9" viewBox="0 0 12 12" fill="none" style="vertical-align:-1px"><rect x="2.5" y="5" width="7" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 5V3.5a2 2 0 014 0V5" stroke="currentColor" stroke-width="1.2"/></svg>':''}</span><svg class="tlbl-caret" width="8" height="8" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5l3 3 3-3z"/></svg>`;
+    lbl.innerHTML=`<span class="tlbl-name">${escHtml(layer.name)}${layer.locked?' <svg width="9" height="9" viewBox="0 0 12 12" fill="none" style="vertical-align:-1px"><rect x="2.5" y="5" width="7" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 5V3.5a2 2 0 014 0V5" stroke="currentColor" stroke-width="1.2"/></svg>':''}</span><svg class="tlbl-caret" width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M1.4 3.4h7.2L5 7.2z"/></svg>`;
     lbl.title='Switch layer';
     lbl.addEventListener('click',e=>{e.stopPropagation();showLayerDropdown(lbl,curLayer);});
     track.appendChild(lbl);
