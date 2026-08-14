@@ -8096,16 +8096,31 @@ function openColorPicker(anchorEl){
   const panelW=Math.min(isPhone?276:284, window.innerWidth-16);
   panel.style.cssText='position:fixed;z-index:700;width:'+panelW+'px;box-sizing:border-box;background:rgba(24,28,36,0.68);border:1px solid rgba(255,255,255,0.13);border-radius:var(--r-card);padding:12px;box-shadow:0 18px 42px rgba(0,0,0,0.42),inset 0 1px 0 rgba(255,255,255,0.10);backdrop-filter:blur(18px) saturate(1.25);-webkit-backdrop-filter:blur(18px) saturate(1.25);';
 
-  // Stroke/Fill target toggle
+  // Stroke/Fill target toggle. Each segment carries a live chip of the colour
+  // it owns, so the control does double duty: it says which channel you are
+  // editing AND shows both current colours at a glance. The selected segment is
+  // a quiet raised pill rather than an accent slab — the saturated square below
+  // is the loudest thing in the panel and nothing should compete with it.
   const segWrap=document.createElement('div');
-  segWrap.style.cssText='display:flex;gap:3px;margin-bottom:10px;background:rgba(0,0,0,0.32);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:3px';
+  segWrap.style.cssText='display:flex;gap:2px;margin-bottom:9px;background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:2px';
+  const _segPaint=(b,on)=>{
+    b.style.background=on?'rgba(255,255,255,0.11)':'transparent';
+    b.style.color=on?'#eef2fb':'var(--t2)';
+    b.style.boxShadow=on?'0 1px 3px rgba(0,0,0,0.32),inset 0 1px 0 rgba(255,255,255,0.10)':'none';
+  };
   const _mkSeg=(label,val)=>{
     const b=document.createElement('button');
-    b.textContent=label; b.dataset.seg=val;
-    b.style.cssText='flex:1;border:none;border-radius:9px;padding:8px 0;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:.3px;transition:background .12s,color .12s;background:'+(colorTarget===val?'var(--accent)':'rgba(255,255,255,0.04)')+';color:'+(colorTarget===val?'#fff':'var(--t2)');
+    b.dataset.seg=val;
+    b.style.cssText='flex:1;display:flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:8px;padding:6px 0;font-size:10.5px;font-weight:700;cursor:pointer;letter-spacing:.2px;transition:background .12s,color .12s';
+    const dot=document.createElement('i');
+    dot.dataset.segDot=val;
+    dot.style.cssText='width:9px;height:9px;border-radius:50%;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.45),0 0 0 1px rgba(255,255,255,0.22);background:'+(val==='fill'?(shapeFillColor||fillColor||'#4a9eff'):(strokeColor||color||'#000'));
+    b.appendChild(dot);
+    b.appendChild(document.createTextNode(label));
+    _segPaint(b,colorTarget===val);
     b.onclick=()=>{
       colorTarget=val;
-      segWrap.querySelectorAll('button').forEach(x=>{const on=x.dataset.seg===val;x.style.background=on?'var(--accent)':'rgba(255,255,255,0.04)';x.style.color=on?'#fff':'var(--t2)';});
+      segWrap.querySelectorAll('button').forEach(x=>_segPaint(x,x.dataset.seg===val));
       _hsv=_hexToHsv(_targetColor()); _paintSB(); _syncCursors(); _emit();
     };
     return b;
@@ -8113,22 +8128,35 @@ function openColorPicker(anchorEl){
   segWrap.appendChild(_mkSeg('Stroke','stroke'));
   segWrap.appendChild(_mkSeg('Fill','fill'));
   panel.appendChild(segWrap);
+  const _syncSegDots=()=>{
+    const s=segWrap.querySelector('[data-seg-dot="stroke"]'), f=segWrap.querySelector('[data-seg-dot="fill"]');
+    if(s) s.style.background=strokeColor||color||'#000';
+    if(f) f.style.background=shapeFillColor||fillColor||'#4a9eff';
+  };
 
   let _hsv = _hexToHsv(_targetColor());
   const sbWrap=document.createElement('div');
-  sbWrap.style.cssText='position:relative;width:100%;height:'+(isPhone?120:142)+'px;border-radius:var(--r-ctl);overflow:hidden;margin-bottom:9px;touch-action:none;cursor:crosshair;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08)';
+  // No overflow:hidden — the cursor ring has to stay whole when the colour sits
+  // on an edge (pure white, pure black). The rounding and hairline live on the
+  // canvas instead, so the ring can hang over the frame like a real handle.
+  sbWrap.style.cssText='position:relative;width:100%;height:'+(isPhone?120:142)+'px;margin-bottom:8px;touch-action:none;cursor:crosshair';
   const sbCanvas=document.createElement('canvas');
   sbCanvas.width=260; sbCanvas.height=isPhone?120:142;
-  sbCanvas.style.cssText='width:100%;height:100%;display:block';
+  sbCanvas.style.cssText='width:100%;height:100%;display:block;border-radius:var(--r-ctl);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08)';
+  const SB_THUMB=16;
   const sbCursor=document.createElement('div');
-  sbCursor.style.cssText='position:absolute;width:15px;height:15px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.65),0 2px 6px rgba(0,0,0,0.35);transform:translate(-50%,-50%);pointer-events:none';
+  sbCursor.style.cssText='position:absolute;width:'+SB_THUMB+'px;height:'+SB_THUMB+'px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.55),0 2px 7px rgba(0,0,0,0.45);transform:translate(-50%,-50%);pointer-events:none';
   sbWrap.appendChild(sbCanvas); sbWrap.appendChild(sbCursor);
   panel.appendChild(sbWrap);
 
+  // Track deliberately slimmer than its thumb: the thumb reads as a handle
+  // riding the rail instead of a blob sitting in a tube. HUE_THUMB drives both
+  // the size and the inset that keeps it from overhanging either end.
+  const HUE_THUMB=18;
   const hueWrap=document.createElement('div');
-  hueWrap.style.cssText='position:relative;width:100%;height:18px;border-radius:999px;margin-bottom:11px;touch-action:none;cursor:pointer;background:linear-gradient(to right,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.10)';
+  hueWrap.style.cssText='position:relative;width:100%;height:12px;border-radius:999px;margin-bottom:10px;touch-action:none;cursor:pointer;background:linear-gradient(to right,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.10),inset 0 1px 2px rgba(0,0,0,0.28)';
   const hueCursor=document.createElement('div');
-  hueCursor.style.cssText='position:absolute;top:50%;width:20px;height:20px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.65),0 2px 6px rgba(0,0,0,0.35);transform:translate(-50%,-50%);pointer-events:none';
+  hueCursor.style.cssText='position:absolute;top:50%;width:'+HUE_THUMB+'px;height:'+HUE_THUMB+'px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.55),0 2px 7px rgba(0,0,0,0.45);transform:translate(-50%,-50%);pointer-events:none';
   hueWrap.appendChild(hueCursor);
   panel.appendChild(hueWrap);
 
@@ -8141,17 +8169,30 @@ function openColorPicker(anchorEl){
     ctx.fillStyle=gy; ctx.fillRect(0,0,w,h);
   }
   function _syncCursors(){
-    sbCursor.style.left=(_hsv.s*100)+'%';
-    sbCursor.style.top=((1-_hsv.v)*100)+'%';
+    // Inset by half a ring at each edge, same reason as the hue handle: at pure
+    // black or pure white the ring would otherwise hang outside the square — and
+    // at the bottom-left corner, outside the panel itself.
+    const sx=_hsv.s, sy=1-_hsv.v;
+    sbCursor.style.left='calc('+(sx*100)+'% + '+(SB_THUMB/2 - sx*SB_THUMB).toFixed(2)+'px)';
+    sbCursor.style.top='calc('+(sy*100)+'% + '+(SB_THUMB/2 - sy*SB_THUMB).toFixed(2)+'px)';
     sbCursor.style.background=_hsvToHex(_hsv.h,_hsv.s,_hsv.v);
-    hueCursor.style.left=(_hsv.h/360*100)+'%';
+    // pct across the rail, but inset by half a thumb at each end so the handle
+    // never hangs off the track — that overhang is the classic "unfinished
+    // slider" tell.
+    const hp=_hsv.h/360;
+    hueCursor.style.left='calc('+(hp*100)+'% + '+(HUE_THUMB/2 - hp*HUE_THUMB).toFixed(2)+'px)';
     hueCursor.style.background=_hsvToHex(_hsv.h,1,1);
   }
+  // Everything downstream of the committed colour: the target dot, the saved-row
+  // ring. Kept out of _syncCursors because that runs *before* applyColor, when
+  // _targetColor() still reports the previous value.
+  function _syncDerived(){ _syncSegDots(); _syncSwatchRings(); }
   function _emit(){
     const hex=_hsvToHex(_hsv.h,_hsv.s,_hsv.v);
     applyColor(hex);
     const hx=document.getElementById('cp-hex-input'); if(hx) hx.value=hex;
     const pv=document.getElementById('cp-preview-swatch'); if(pv) pv.style.background=hex;
+    _syncDerived();
     const native=document.getElementById('cp-native-color'); if(native) native.value=hex;
   }
   function _sbFromEvent(e){
@@ -8177,22 +8218,39 @@ function openColorPicker(anchorEl){
   _bindDrag(hueWrap,_hueFromEvent);
   _paintSB(); _syncCursors();
 
+  // The ring marks "this saved swatch is the colour you are holding". It has to
+  // follow the picker, not just the last tap, so it is a cheap restyle of the
+  // existing buttons rather than a rebuild of the row — dragging the hue bar
+  // would otherwise re-create six buttons and their listeners per frame.
+  const _ringSwatch=sw=>{
+    const on=sw.dataset.c===_targetColor();
+    sw.style.boxShadow=on
+      ? '0 0 0 2px rgba(18,21,28,0.9),0 0 0 3.5px #fff'
+      : 'inset 0 0 0 1px rgba(0,0,0,0.35),0 0 0 1px rgba(255,255,255,0.16)';
+  };
+  const _syncSwatchRings=()=>{ savedWrap.querySelectorAll('button[data-c]').forEach(_ringSwatch); };
+
   const savedWrap=document.createElement('div');
-  savedWrap.style.cssText='display:flex;align-items:center;gap:7px;margin-bottom:10px;min-height:30px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px';
-  const toolBtnStyle='width:30px;height:30px;border-radius:var(--r-sm);border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.055);color:#dfe5f2;cursor:pointer;display:grid;place-items:center;flex-shrink:0';
+  savedWrap.style.cssText='display:flex;align-items:center;gap:8px;min-height:34px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:3px 0';
+  // The save button is a *control*, the rest of the row is *content*, so they
+  // are told apart by shape (rounded square vs circle) and separated by a rule.
+  // Same-sized squares in a row all read as colours, whatever is drawn on them.
   const rebuildSaved=()=>{
     savedWrap.innerHTML='';
     const add=document.createElement('button');
     add.title='Save current color';
-    add.style.cssText=toolBtnStyle+'border-style:dashed;color:rgba(223,229,242,0.68);font-size:18px;line-height:1';
+    add.style.cssText='width:28px;height:28px;border-radius:8px;border:1px dashed rgba(255,255,255,0.28);background:transparent;color:rgba(223,229,242,0.72);cursor:pointer;display:grid;place-items:center;flex-shrink:0;font-size:16px;line-height:1;padding:0';
     add.textContent='+';
     add.onclick=()=>{ saveCurrentSwatch(); rebuildSaved(); };
     savedWrap.appendChild(add);
+    const rule=document.createElement('i');
+    rule.style.cssText='width:1px;height:18px;flex-shrink:0;background:rgba(255,255,255,0.11)';
+    savedWrap.appendChild(rule);
     savedSwatches.slice(0,18).forEach((c,idx)=>{
-      const activeC=(typeof _targetColor==='function')?_targetColor():color;
       const sw=document.createElement('button');
-      sw.style.cssText='position:relative;width:30px;height:30px;border-radius:var(--r-sm);border:2px solid '+(c===activeC?'#fff':'transparent')+';background:'+c+';cursor:pointer;flex-shrink:0;transition:transform .12s';
-      sw.title=c;
+      sw.dataset.c=c;
+      sw.style.cssText='position:relative;width:26px;height:26px;border-radius:50%;border:none;padding:0;background:'+c+';cursor:pointer;flex-shrink:0;transition:transform .12s';
+      _ringSwatch(sw);
       // Tap = pick the color. Long-press ALWAYS does the same thing: reveals a
       // small ✕ remove badge on the swatch (predictable — no state-dependent
       // guessing between delete vs replace). Tap the ✕ to remove; tap elsewhere
@@ -8230,30 +8288,29 @@ function openColorPicker(anchorEl){
   rebuildSaved();
   panel.appendChild(savedWrap);
 
-  const swHint=document.createElement('div');
-  swHint.style.cssText='font-size:9.5px;color:var(--t2);text-align:center;margin:-2px 0 2px;opacity:.7;font-weight:600';
-  swHint.textContent='+ saves current color \u00b7 long-press a swatch to remove it';
-  panel.appendChild(swHint);
+  // No instruction line. Every affordance here is either self-evident (+ on a
+  // dashed outline) or discoverable by holding a swatch, and a sentence of
+  // small print at the bottom of a 276px panel is read once and then only ever
+  // adds height.
 
-  // Bottom row: a single unified hex field with the live color preview tucked
-  // INSIDE it (left), and the system-picker as a clearly-iconed button (right).
-  // This replaces three ambiguous same-size dark squares with one input that
-  // reads as "here's your color + its hex" plus an obvious secondary action.
+  // Bottom row: one hex field, the live colour as its left cap. The cap is
+  // deliberately the only element in the panel that repeats the current colour
+  // as a solid block \u2014 it anchors the number to the thing it describes.
   const row=document.createElement('div');
-  row.style.cssText='display:grid;grid-template-columns:minmax(0,1fr) 38px;gap:8px;align-items:center';
+  row.style.cssText='display:grid;grid-template-columns:minmax(0,1fr);align-items:center';
 
   const hexWrap=document.createElement('div');
-  hexWrap.style.cssText='display:flex;align-items:center;gap:9px;min-width:0;background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:5px 10px 5px 6px';
+  hexWrap.style.cssText='display:flex;align-items:center;gap:8px;min-width:0;background:rgba(0,0,0,0.24);border:1px solid rgba(255,255,255,0.09);border-radius:9px;padding:4px 10px 4px 4px';
   const preview=document.createElement('div');
   preview.id='cp-preview-swatch';
-  preview.style.cssText='width:26px;height:26px;border-radius:6px;flex-shrink:0;background:'+color+';box-shadow:inset 0 0 0 1px rgba(0,0,0,0.35),0 1px 2px rgba(0,0,0,0.3)';
+  preview.style.cssText='width:24px;height:24px;border-radius:6px;flex-shrink:0;background:'+color+';box-shadow:inset 0 0 0 1px rgba(0,0,0,0.4),0 0 0 1px rgba(255,255,255,0.14)';
   const hexIn=document.createElement('input');
   hexIn.id='cp-hex-input';
   hexIn.type='text'; hexIn.maxLength=7; hexIn.value=color;
-  hexIn.style.cssText='min-width:0;flex:1;background:none;border:none;color:#fff;padding:0;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:0.5px;outline:none;text-transform:uppercase';
+  hexIn.style.cssText='min-width:0;flex:1;background:none;border:none;color:#e8ecf6;padding:0;font-size:12.5px;font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:0.6px;outline:none;text-transform:uppercase';
   hexIn.oninput=()=>{
     const v=hexIn.value;
-    if(/^#[0-9a-fA-F]{6}$/.test(v)){ preview.style.background=v; applyColor(v); _hsv=_hexToHsv(v); _paintSB(); _syncCursors(); }
+    if(/^#[0-9a-fA-F]{6}$/.test(v)){ preview.style.background=v; applyColor(v); _hsv=_hexToHsv(v); _paintSB(); _syncCursors(); _syncDerived(); }
   };
   hexIn.onkeydown=e=>{ if(e.key==='Enter'){ panel.remove(); } };
   hexWrap.appendChild(preview); hexWrap.appendChild(hexIn);
