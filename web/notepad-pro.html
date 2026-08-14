@@ -1562,6 +1562,7 @@
       display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3;
       overflow:hidden; word-break:break-word;
     }
+    .note-preview .preview-note { font-style:italic; opacity:.72; }
     /* keep multi-paragraph bodies from stacking tall inside the clamp */
     .note-preview > * { margin:0 0 4px; }
     .note-preview h1, .note-preview h2, .note-preview h3 { font-size:13.5px; font-weight:700; }
@@ -2992,6 +2993,62 @@
       return { images, audio, tables, checks, total: images + audio };
     }
 
+    /* Rendering and searching used to re-parse every note body on every
+       keystroke — twice per note, and each parse kicked off image loads for
+       any embedded attachment. Derive once per body change and cache it. */
+    function noteDerived(note) {
+      if (note._derivedFrom === note.body && note._plain !== undefined) {
+        return { plain: note._plain, stats: note._stats, preview: note._preview };
+      }
+      const stats = attachmentStats(note.body);
+      const temp = document.createElement("div");
+      temp.innerHTML = note.body || "";
+
+      // Attachments never contribute to the text index; drop them before
+      // reading textContent so nothing tries to decode a payload.
+      temp.querySelectorAll("img,audio,video,source").forEach(el => el.remove());
+      const plain = (temp.textContent || "").replace(/\u200B/g, "").trim();
+
+      // Card previews hide attachments and tables in CSS anyway, so building
+      // the preview without them keeps the grid from carrying megabytes of
+      // base64 through innerHTML on every render. Also drop anything
+      // executable, since bodies can pick up markup from a paste.
+      temp.querySelectorAll("table,iframe,script,style,object,embed,link,meta").forEach(el => el.remove());
+      temp.querySelectorAll("*").forEach(el => {
+        for (const attr of [...el.attributes]) {
+          const name = attr.name.toLowerCase();
+          if (name.startsWith("on") ||
+              ((name === "href" || name === "src") && /^\s*javascript:/i.test(attr.value))) {
+            el.removeAttribute(attr.name);
+          }
+        }
+      });
+      const preview = temp.innerHTML;
+
+      Object.defineProperties(note, {
+        _plain:       { value: plain, writable: true, configurable: true, enumerable: false },
+        _stats:       { value: stats, writable: true, configurable: true, enumerable: false },
+        _preview:     { value: preview, writable: true, configurable: true, enumerable: false },
+        _derivedFrom: { value: note.body, writable: true, configurable: true, enumerable: false }
+      });
+      return { plain, stats, preview };
+    }
+
+    // A note can be entirely a table or a photo. Previews hide both, so say
+    // what is in there rather than rendering a blank card.
+    function emptyPreviewLabel(stats) {
+      const parts = [];
+      if (stats.images) parts.push(`${stats.images} image${stats.images === 1 ? "" : "s"}`);
+      if (stats.audio)  parts.push(`${stats.audio} audio clip${stats.audio === 1 ? "" : "s"}`);
+      if (stats.tables) parts.push(`${stats.tables} table${stats.tables === 1 ? "" : "s"}`);
+      if (stats.checks) parts.push(`${stats.checks} task${stats.checks === 1 ? "" : "s"}`);
+      return `<p class="preview-note">${parts.length ? escapeHtml(parts.join(" · ")) : "Empty note"}</p>`;
+    }
+
+    const noteStats = note => noteDerived(note).stats;
+    const notePlain = note => noteDerived(note).plain;
+    const notePreview = note => noteDerived(note).preview;
+
     function fileToDataURL(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -3651,7 +3708,7 @@
         <div class="modal-head"><div><h2 class="sheet-title">${escapeHtml(group.name)}</h2><p class="sheet-copy">${members.length} notes. Tap a note to open it.</p></div><button class="icon-btn" data-close-modal aria-label="Close">${icon("x","bold")}</button></div>
         <div class="stack-note-grid">
           ${members.map(note => {
-            const stats = attachmentStats(note.body);
+            const stats = noteStats(note);
             const badges = [];
             if (stats.images) badges.push(`${icon("image-square","bold")} ${stats.images}`);
             if (stats.audio) badges.push(`${icon("music-note","bold")} ${stats.audio}`);
@@ -3661,7 +3718,7 @@
             <div class="stack-note-card" data-open-stack-note="${note.id}" data-color="${note.color || "ice"}">
               <button class="stack-note-remove" data-remove-stack-note="${note.id}" aria-label="Remove from stack">${icon("minus","bold")}</button>
               <h3>${escapeHtml(note.title || "Untitled note")}</h3>
-              <div class="stack-note-preview">${escapeHtml(stripHtml(note.body).slice(0,70) || "Empty note")}</div>
+              <div class="stack-note-preview">${notePlain(note) ? escapeHtml(notePlain(note).slice(0,70)) : emptyPreviewLabel(noteStats(note))}</div>
               <div class="stack-note-foot">
                 <span>${formatDate(note.updatedAt)}</span>
                 ${badges.length
@@ -3782,7 +3839,7 @@
     }
 
     function noteMatchesSpecialFilter(note) {
-      const stats = attachmentStats(note.body);
+      const stats = noteStats(note);
       if (activeFilter === "pinned") return note.pinned && !note.deleted;
       if (activeFilter === "quick") return note.quick && !note.deleted;
       if (activeFilter === "shared") return note.shared && !note.deleted;
@@ -3799,7 +3856,8 @@
       const q = document.getElementById("searchInput").value.trim().toLowerCase();
       const filtered = notes.filter(note => {
         if (!noteMatchesSpecialFilter(note)) return false;
-        const haystack = `${note.title} ${stripHtml(note.body)} ${note.tag} ${note.folder}`.toLowerCase();
+        if (!q) return true;
+        const haystack = `${note.title} ${notePlain(note)} ${note.tag} ${note.folder}`.toLowerCase();
         return haystack.includes(q);
       });
 
@@ -3851,7 +3909,7 @@
         }
 
         const note = item.note;
-        const stats = attachmentStats(note.body);
+        const stats = noteStats(note);
         const badgeParts = [];
         if (stats.images) badgeParts.push(`${icon("image-square", "bold")} ${stats.images}`);
         if (stats.audio) badgeParts.push(`${icon("music-note", "bold")} ${stats.audio}`);
@@ -3869,7 +3927,7 @@
                 <button class="card-menu" data-card-menu="note:${note.id}" title="Note options" aria-label="Options for ${escapeHtml(note.title || "Untitled note")}">${icon("dots-three","bold")}</button>
               </div>
               <h3>${escapeHtml(note.title || "Untitled note")}${note.locked ? ' <i class="ph-fill ph-lock-simple" aria-label="Locked"></i>' : ""}</h3>
-              <div class="note-preview">${note.locked ? "<p>••••••••••••</p>" : (note.body || "<p>Empty note</p>")}</div>
+              <div class="note-preview">${note.locked ? "<p>••••••••••••</p>" : (notePreview(note) || emptyPreviewLabel(stats))}</div>
               <div class="note-meta">
                 <span>${formatDate(note.updatedAt)}</span>
                 ${badgeParts.length
