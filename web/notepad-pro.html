@@ -1553,9 +1553,9 @@
     }
     .note-type {
       font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.1em;
-      opacity:.62; margin-bottom:9px; padding-right:44px;
+      opacity:.62; margin-bottom:9px; padding-right:80px;
     }
-    .note-card h3 { margin:2px 46px 9px 0; font-size:18px; line-height:1.18; letter-spacing:-.02em; }
+    .note-card h3 { margin:2px 80px 9px 0; font-size:18px; line-height:1.18; letter-spacing:-.02em; }
     .note-card h3 .ph-lock-simple { font-size:14px; opacity:.6; }
     .note-preview {
       color:rgba(7,19,52,.66); line-height:1.42; font-size:13.5px;
@@ -1567,6 +1567,8 @@
     .note-preview h1, .note-preview h2, .note-preview h3 { font-size:13.5px; font-weight:700; }
     .note-preview ul, .note-preview ol { padding-left:18px; }
     .note-preview img, .note-preview audio, .note-preview table { display:none; }
+    /* The preview is a thumbnail, not a control surface: clicks belong to the card. */
+    .note-preview, .note-preview * { pointer-events:none; }
     .note-meta {
       margin-top:auto; padding-top:17px;
       color:rgba(7,19,52,.50); font-size:11px;
@@ -2321,10 +2323,6 @@
        Resizable thumbnails + drag-to-stack grouping
        These controls stay invisible until a card is long-pressed.
     ========================================================== */
-    .notes-grid {
-      grid-auto-flow: dense;
-    }
-
     /* Swipe shell wraps each card: action tray underneath, card slides over it */
     .card-shell {
       position: relative;
@@ -2332,7 +2330,6 @@
       isolation: isolate;
       touch-action: pan-y;
     }
-    .card-shell.shell-span-2 { grid-column: span 2; }
 
     .card-actions {
       position: absolute;
@@ -2362,8 +2359,6 @@
       box-shadow: 0 6px 16px rgba(3,4,94,.14);
     }
     .swipe-action i { font-size: 20px; }
-    .swipe-action.pin.on { background: var(--cyan); color: #04263a; }
-    .swipe-action.resize { background: #e7effc; color: #0b3a86; }
     .swipe-action.danger { background: #ffe3e3; color: #b42323; }
     .swipe-action:active { transform: scale(.94); }
 
@@ -2376,9 +2371,16 @@
     .card-shell.swiping > .note-card { transition: none; }
     .card-shell.open > .note-card { box-shadow: -10px 0 26px rgba(3,4,94,.14); }
 
-    .pin-corner {
+    /* Per-card controls. The menu is the only entry point to Shape, so it is
+       always visible rather than hidden behind a gesture. */
+    .card-tools {
       position: absolute;
       top: 11px; right: 11px;
+      display: flex;
+      gap: 6px;
+      z-index: 6;
+    }
+    .pin-corner, .card-menu {
       width: 30px; height: 30px;
       border: 0;
       border-radius: 10px;
@@ -2386,11 +2388,11 @@
       background: rgba(255,255,255,.32);
       color: rgba(7,19,52,.42);
       font-size: 15px;
-      z-index: 6;
       touch-action: manipulation;
       transition: background .16s ease, color .16s ease, transform .16s ease;
     }
-    .pin-corner:active { transform: scale(.9); }
+    .pin-corner:active, .card-menu:active { transform: scale(.9); }
+    .card-menu:hover { background: rgba(255,255,255,.62); color: rgba(7,19,52,.72); }
     .pin-corner.on {
       background: var(--blue);
       color: #fff;
@@ -2403,25 +2405,6 @@
       -webkit-user-select: none;
       cursor: pointer;
     }
-
-    .note-card.thumb-size-compact { min-height: 148px !important; }
-    .note-card.thumb-size-medium  { min-height: 168px !important; }
-    .note-card.thumb-size-wide {
-      grid-column: span 2;
-      min-height: 168px !important;
-    }
-    .note-card.thumb-size-tall {
-      min-height: 320px !important;
-    }
-    .note-card.thumb-size-large {
-      grid-column: span 2;
-      min-height: 320px !important;
-    }
-
-    .note-card.thumb-size-compact .note-preview { -webkit-line-clamp: 2; }
-    .note-card.thumb-size-wide .note-preview { -webkit-line-clamp: 3; }
-    .note-card.thumb-size-tall .note-preview,
-    .note-card.thumb-size-large .note-preview { -webkit-line-clamp: 9; }
 
     .note-card.thumb-shape-soft { border-radius: 25px; }
     .note-card.thumb-shape-round { border-radius: 42px; }
@@ -2465,7 +2448,7 @@
       transition: width .12s ease, height .12s ease;
       overflow: hidden;
     }
-    .drag-ghost .pin-btn { display: none; }
+    .drag-ghost .card-tools { display: none; }
 
     .group-card {
       overflow: visible;
@@ -2649,19 +2632,9 @@
     }
 
     @media (max-width: 760px) {
-      .note-card.thumb-size-wide,
-      .note-card.thumb-size-large { grid-column: span 2; }
-      .note-card.thumb-size-tall { min-height: 325px !important; }
-      .note-card.thumb-size-large { min-height: 325px !important; }
-      .size-choice-grid { grid-template-columns: repeat(5, minmax(56px,1fr)); overflow-x: auto; }
-      .layout-edit-hint { bottom: 16px; max-width: calc(100vw - 24px); }
     }
 
     @media (max-width: 470px) {
-      .note-card.thumb-size-wide,
-      .note-card.thumb-size-large { grid-column: span 1; }
-      .note-card.thumb-size-wide { min-height: 225px !important; }
-      .note-card.thumb-size-large { min-height: 340px !important; }
       .stack-sheet-actions { grid-template-columns: 1fr; }
     }
 
@@ -3048,7 +3021,6 @@
     /* ------------------------------
        Thumbnail layout and note stacks
     ------------------------------ */
-    const THUMB_SIZES = ["compact", "medium", "wide", "tall", "large"];
     const THUMB_SHAPES = ["soft", "round", "squircle", "sharp"];
 
     function persistGroups() {
@@ -3057,7 +3029,6 @@
 
     function hydrateThumbnailData() {
       notes.forEach(note => {
-        if (!THUMB_SIZES.includes(note.thumbSize)) note.thumbSize = "medium";
         if (!THUMB_SHAPES.includes(note.thumbShape)) note.thumbShape = "soft";
         if (typeof note.groupId === "undefined") note.groupId = null;
       });
@@ -3067,7 +3038,6 @@
           id: group.id,
           name: group.name || "Note stack",
           color: group.color || "ice",
-          thumbSize: THUMB_SIZES.includes(group.thumbSize) ? group.thumbSize : "medium",
           thumbShape: THUMB_SHAPES.includes(group.thumbShape) ? group.thumbShape : "soft",
           createdAt: group.createdAt || Date.now(),
           updatedAt: group.updatedAt || Date.now()
@@ -3110,9 +3080,6 @@
       return `thumb-shape-${shape}`;
     }
 
-    // Cards use a uniform even height now (no auto-varied mosaic).
-    function autoSizeClass() { return ""; }
-
     function getThumbnailEntity(type, id) {
       if (type === "group") return getGroup(String(id));
       return notes.find(note => note.id === Number(id));
@@ -3137,7 +3104,7 @@
           if (!byGroup.has(note.groupId)) byGroup.set(note.groupId, []);
           byGroup.get(note.groupId).push(note);
         } else {
-          items.push({ type: "note", updatedAt: note.updatedAt, note });
+          items.push({ type: "note", updatedAt: note.updatedAt, pinned: !!note.pinned, note });
         }
       }
 
@@ -3145,14 +3112,17 @@
         const group = getGroup(groupId);
         const allMembers = getGroupMembers(groupId);
         if (!group || allMembers.length < 2) {
-          matchingMembers.forEach(note => items.push({ type: "note", updatedAt: note.updatedAt, note }));
+          matchingMembers.forEach(note => items.push({ type: "note", updatedAt: note.updatedAt, pinned: !!note.pinned, note }));
           continue;
         }
         const latest = Math.max(group.updatedAt || 0, ...allMembers.map(n => n.updatedAt || 0));
-        items.push({ type: "group", updatedAt: latest, group, members: allMembers, matchingMembers });
+        // A stack floats if any note inside it is pinned.
+        items.push({ type: "group", updatedAt: latest, pinned: allMembers.some(n => n.pinned), group, members: allMembers });
       }
 
-      return items.sort((a,b) => sortNewest ? b.updatedAt - a.updatedAt : a.updatedAt - b.updatedAt);
+      // Pinned always outranks recency, the way every notes app behaves.
+      return items.sort((a,b) =>
+        (b.pinned - a.pinned) || (sortNewest ? b.updatedAt - a.updatedAt : a.updatedAt - b.updatedAt));
     }
 
     async function createGroupFromNotes(sourceNote, targetNote) {
@@ -3162,8 +3132,6 @@
         id: `stack_${now}_${Math.random().toString(36).slice(2,7)}`,
         name: "New stack",
         color: targetNote.color || sourceNote.color || "ice",
-        thumbSize: "medium",
-        
         createdAt: now,
         updatedAt: now
       };
@@ -3456,7 +3424,7 @@
 
         shell.addEventListener("pointerdown", event => {
           if (event.button !== undefined && event.button !== 0) return;
-          if (event.target.closest(".swipe-action,.resize-handle,[data-group-menu],[data-pin]")) return;
+          if (event.target.closest(".swipe-action,[data-card-menu],[data-pin]")) return;
           startX = event.clientX;
           startY = event.clientY;
           pointerId = event.pointerId;
@@ -3510,17 +3478,35 @@
           });
         }
 
+        const activate = () => {
+          if (source.type === "group") { openGroupSheet(source.id); return; }
+          const note = notes.find(n => n.id === Number(source.id));
+          // A deleted note has no editor to open — offer restore/delete instead.
+          if (note?.deleted) openCardContext("note", source.id);
+          else openExistingNote(Number(source.id));
+        };
+
         // Tap opens the note/stack (unless a swipe/drag just happened).
         card.addEventListener("click", event => {
-          if (event.target.closest(".swipe-action,[data-group-menu],[data-pin]")) return;
+          if (event.target.closest(".swipe-action,[data-card-menu],[data-pin]")) return;
           if (Date.now() < suppressCardClickUntil) { event.preventDefault(); return; }
           if (shell.classList.contains("open")) { settle(false); return; }
-          if (source.type === "group") openGroupSheet(source.id);
-          else openExistingNote(Number(source.id));
+          activate();
         });
 
+        // Cards are role="button"; Enter/Space must work like a tap.
+        card.addEventListener("keydown", event => {
+          if (event.target !== card) return;
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          activate();
+        });
+
+        // Right-click / long-press opens the same menu the ⋯ button does.
         card.addEventListener("contextmenu", event => {
           event.preventDefault();
+          closeOpenSwipe(null);
+          openCardContext(source.type, source.id);
         });
       });
     }
@@ -3766,7 +3752,6 @@
       if (name === "features") featuresView.classList.remove("hidden");
       if (name === "settings") settingsView.classList.remove("hidden");
 
-      document.querySelectorAll("[data-mobile]").forEach(btn => btn.classList.toggle("active", btn.dataset.mobile === name));
       document.querySelectorAll(".nav-btn[data-section]").forEach(btn => {
         btn.classList.toggle("active", btn.dataset.section === name && !btn.dataset.filter);
       });
@@ -3838,7 +3823,7 @@
         return;
       }
 
-      notesGrid.innerHTML = items.map((item, i) => {
+      notesGrid.innerHTML = items.map(item => {
         if (item.type === "group") {
           const group = item.group;
           const members = item.members;
@@ -3846,12 +3831,14 @@
           const latestMember = [...members].sort((a,b) => b.updatedAt - a.updatedAt)[0];
           const animateClass = recentlyCreatedGroupId === group.id ? " stack-created" : "";
           return `
-            <div class="card-shell${autoSizeClass(i)}" data-card-type="group" data-id="${group.id}">
-              <div class="card-actions" aria-hidden="true">
+            <div class="card-shell" data-card-type="group" data-id="${group.id}">
+              <div class="card-actions" inert>
                 <button class="swipe-action danger" data-swipe="ungroup" data-id="${group.id}" aria-label="Dissolve stack">${icon("arrows-out-simple","bold")}<span>Dissolve</span></button>
               </div>
-              <article class="note-card group-card ${cardClasses(group)}${animateClass}" data-card-type="group" data-id="${group.id}" data-color="${group.color || latestMember?.color || "ice"}" tabindex="0">
-                <button class="pin-btn" data-group-menu="${group.id}" title="Stack options" aria-label="Stack options">${icon("dots-three","bold")}</button>
+              <article class="note-card group-card ${cardClasses(group)}${animateClass}" role="button" tabindex="0" data-card-type="group" data-id="${group.id}" data-color="${group.color || latestMember?.color || "ice"}" aria-label="Open stack ${escapeHtml(group.name || "Note stack")}">
+                <div class="card-tools">
+                  <button class="card-menu" data-card-menu="group:${group.id}" title="Stack options" aria-label="Stack options">${icon("dots-three","bold")}</button>
+                </div>
                 <div class="note-type">Note stack${pinnedCount ? ` · ${pinnedCount} pinned` : ""}</div>
                 <h3>${escapeHtml(group.name || "Note stack")}</h3>
                 <span class="group-count">${icon("stack","bold")} ${members.length} notes</span>
@@ -3872,12 +3859,15 @@
         if (stats.checks) badgeParts.push(`${icon("check-square", "bold")} ${stats.checks}`);
         const lockMark = note.locked ? " · Locked" : "";
         return `
-          <div class="card-shell${autoSizeClass(i)}" data-card-type="note" data-id="${note.id}">
-            <div class="card-actions" aria-hidden="true">
+          <div class="card-shell" data-card-type="note" data-id="${note.id}">
+            <div class="card-actions" inert>
               <button class="swipe-action danger" data-swipe="delete" data-id="${note.id}" aria-label="Move to Recently Deleted">${icon("trash","bold")}<span>Delete</span></button>
             </div>
-            <article class="note-card ${cardClasses(note)}" data-card-type="note" data-id="${note.id}" data-color="${note.color || "ice"}" tabindex="0">
-              <button class="pin-corner ${note.pinned ? "on" : ""}" data-pin="${note.id}" aria-label="${note.pinned ? "Unpin note" : "Pin note"}" aria-pressed="${note.pinned ? "true" : "false"}">${icon("push-pin", note.pinned ? "fill" : "bold")}</button>
+            <article class="note-card ${cardClasses(note)}" role="button" tabindex="0" data-card-type="note" data-id="${note.id}" data-color="${note.color || "ice"}" aria-label="${note.deleted ? "Deleted note" : "Open note"}: ${escapeHtml(note.title || "Untitled note")}">
+              <div class="card-tools">
+                ${note.deleted ? "" : `<button class="pin-corner ${note.pinned ? "on" : ""}" data-pin="${note.id}" aria-label="${note.pinned ? "Unpin note" : "Pin note"}" aria-pressed="${note.pinned ? "true" : "false"}">${icon("push-pin", note.pinned ? "fill" : "bold")}</button>`}
+                <button class="card-menu" data-card-menu="note:${note.id}" title="Note options" aria-label="Options for ${escapeHtml(note.title || "Untitled note")}">${icon("dots-three","bold")}</button>
+              </div>
               <h3>${escapeHtml(note.title || "Untitled note")}${note.locked ? ' <i class="ph-fill ph-lock-simple" aria-label="Locked"></i>' : ""}</h3>
               <div class="note-preview">${note.locked ? "<p>••••••••••••</p>" : (note.body || "<p>Empty note</p>")}</div>
               <div class="note-meta">
@@ -3892,11 +3882,13 @@
 
       recentlyCreatedGroupId = null;
 
-      document.querySelectorAll("[data-group-menu]").forEach(btn => {
+      document.querySelectorAll("[data-card-menu]").forEach(btn => {
+        btn.addEventListener("pointerdown", event => event.stopPropagation());
         btn.addEventListener("click", event => {
           event.stopPropagation();
           closeOpenSwipe(null);
-          openCardContext("group", btn.dataset.groupMenu);
+          const [type, ...rest] = btn.dataset.cardMenu.split(":");
+          openCardContext(type, rest.join(":"));
         });
       });
 
@@ -4158,7 +4150,7 @@
           const blob = new Blob(mediaChunks, { type: mediaRecorder.mimeType || "audio/webm" });
           const data = await fileToDataURL(blob);
           insertHTML(`<div contenteditable="false"><audio controls src="${data}"></audio><div style="font-size:12px;opacity:.58">Recorded audio · ${new Date().toLocaleTimeString()}</div></div><p><br></p>`);
-          const recordingControl = document.getElementById("recordBtn") || document.getElementById("editorAddBtn");
+          const recordingControl = document.getElementById("editorAddBtn");
           if (recordingControl) {
             recordingControl.classList.remove("recording");
             recordingControl.innerHTML = icon("plus", "bold");
@@ -4167,7 +4159,7 @@
           showToast("Recording added");
         };
         mediaRecorder.start();
-        const recordingControl = document.getElementById("recordBtn") || document.getElementById("editorAddBtn");
+        const recordingControl = document.getElementById("editorAddBtn");
         if (recordingControl) {
           recordingControl.classList.add("recording");
           recordingControl.innerHTML = icon("stop", "fill");
@@ -4507,10 +4499,14 @@
       modalBackdrop.classList.remove("sheet-mode");
       modalBox.classList.remove("bottom-sheet");
       const folderRows = folders.map(folder => `<button class="soft-btn menu-folder" data-menu-folder="${escapeHtml(folder)}" style="width:100%;display:flex;justify-content:space-between;align-items:center"><span><i class="ph-duotone ph-folder" aria-hidden="true"></i> ${escapeHtml(folder)}</span><i class="ph-bold ph-caret-right" aria-hidden="true"></i></button>`).join("");
+      const trashCount = notes.filter(n => n.deleted).length;
       modalBox.innerHTML = `
         <div class="modal-head"><h2>Library</h2><button class="icon-btn" data-close-modal aria-label="Close"><i class="ph-bold ph-x" aria-hidden="true"></i></button></div>
         <div class="modal-grid">
+          <button class="soft-btn" data-menu-filter="all" style="width:100%;display:flex;justify-content:space-between;align-items:center"><span><i class="ph-duotone ph-squares-four" aria-hidden="true"></i> All notes</span><span>${notes.filter(n => !n.deleted).length}</span></button>
+          <button class="soft-btn" data-menu-filter="pinned" style="width:100%;display:flex;justify-content:space-between;align-items:center"><span><i class="ph-duotone ph-push-pin" aria-hidden="true"></i> Pinned</span><span>${notes.filter(n => n.pinned && !n.deleted).length}</span></button>
           ${folderRows}
+          <button class="soft-btn" data-menu-filter="trash" style="width:100%;display:flex;justify-content:space-between;align-items:center"><span><i class="ph-duotone ph-trash" aria-hidden="true"></i> Recently deleted</span><span>${trashCount}</span></button>
           <button class="soft-btn" id="menuNewFolder" style="width:100%"><i class="ph-bold ph-folder-plus" aria-hidden="true"></i> New folder</button>
           <button class="soft-btn" id="menuSettings" style="width:100%"><i class="ph-duotone ph-gear-six" aria-hidden="true"></i> Settings</button>
         </div>`;
@@ -4518,6 +4514,10 @@
       bindModalClose();
       modalBox.querySelectorAll("[data-menu-folder]").forEach(btn => btn.onclick = () => {
         activeFolder = btn.dataset.menuFolder; activeFilter = "folder";
+        closeModal(); showView("home"); renderNotes();
+      });
+      modalBox.querySelectorAll("[data-menu-filter]").forEach(btn => btn.onclick = () => {
+        activeFilter = btn.dataset.menuFilter; activeFolder = null;
         closeModal(); showView("home"); renderNotes();
       });
       document.getElementById("menuNewFolder").onclick = () => { closeModal(); openFolderModal(); };
@@ -4560,8 +4560,8 @@
       ["Audio recording","Record through the browser microphone and insert the clip.","✓","microphone"],
       ["Sketching","Draw on a canvas and insert the sketch as an image.","✓","pencil-line"],
       ["Folders and tags","Organise notes and filter them quickly.","✓","folders"],
-      ["Card shapes","Swipe a card left and tap Shape to change its corner style.","✓","shapes"],
-      ["Drag-to-stack groups","Hold a card and drop it onto another note or stack.","✓","stack"],
+      ["Card shapes","Open a card's ⋯ menu and pick Shape to change its corner style.","✓","shapes"],
+      ["Drag-to-stack groups","Hold a card, then drop it onto another note or stack.","✓","stack"],
       ["Pin, share, lock","Pin notes, share text and protect notes with a local passcode.","✓","shield-check"],
       ["Offline autosave","IndexedDB stores notes and attachments without a server.","✓","database"],
       ["Document scanning","Camera capture, cropping, perspective correction and PDF creation.","Native phase","scan"],
@@ -4587,7 +4587,6 @@
        Events
     ------------------------------ */
     document.getElementById("newNoteBtn").onclick = () => newNote("blank");
-    document.querySelectorAll("[data-quick]").forEach(btn => btn.onclick = () => newNote(btn.dataset.quick));
 
     document.getElementById("backBtn").onclick = async () => {
       savedRange = null;
@@ -4691,7 +4690,7 @@
     document.getElementById("duplicateBtn").onclick = async () => {
       await saveActive(false);
       const note = currentNote(); if (!note) return;
-      const copy = {...note, id:Date.now(), title:note.title + " copy", pinned:false, locked:false, lockHash:"", groupId:null, thumbSize:"medium", createdAt:Date.now(), updatedAt:Date.now()};
+      const copy = {...note, id:Date.now(), title:note.title + " copy", pinned:false, locked:false, lockHash:"", groupId:null, createdAt:Date.now(), updatedAt:Date.now()};
       notes.unshift(copy); await dbPut(copy); loadEditor(copy); showToast("Note duplicated");
     };
 
@@ -4755,29 +4754,14 @@
 
     document.getElementById("newFolderBtn").onclick = openFolderModal;
 
-    const layoutBtn = document.getElementById("layoutBtn");
-    if (layoutBtn) layoutBtn.onclick = () => {
-      notesGrid.classList.toggle("list");
-      layoutBtn.innerHTML = notesGrid.classList.contains("list") ? icon("rows", "duotone") : icon("squares-four", "duotone");
-    };
-    const sortBtn = document.getElementById("sortBtn");
-    if (sortBtn) sortBtn.onclick = () => {
-      sortNewest = !sortNewest;
-      sortBtn.textContent = sortNewest ? "Latest" : "Oldest";
-      renderNotes();
-    };
 
     function toggleDark() {
       document.body.classList.toggle("dark");
       localStorage.setItem("np_dark", document.body.classList.contains("dark") ? "1" : "0");
     }
-    const darkBtn = document.getElementById("darkBtn");
-    if (darkBtn) darkBtn.onclick = toggleDark;
     document.getElementById("settingsDarkBtn").onclick = toggleDark;
 
     function exportAll() { downloadJSON({ version: 2, notes, groups }, "notepad-pro-backup.json"); showToast("Backup exported"); }
-    const exportAllBtn = document.getElementById("exportAllBtn");
-    if (exportAllBtn) exportAllBtn.onclick = exportAll;
     document.getElementById("settingsExportBtn").onclick = exportAll;
 
     document.getElementById("emptyTrashBtn").onclick = async () => {
@@ -4788,10 +4772,6 @@
       renderNotes(); showToast("Trash emptied");
     };
 
-    document.querySelectorAll("[data-mobile]").forEach(btn => btn.onclick = () => showView(btn.dataset.mobile));
-    document.querySelectorAll("[data-mobile-filter]").forEach(btn => btn.onclick = () => {
-      activeFilter = btn.dataset.mobileFilter; showView("home"); renderNotes();
-    });
 
     modalBackdrop.addEventListener("click", e => { if (e.target === modalBackdrop) closeModal(); });
 
