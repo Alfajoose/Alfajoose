@@ -1555,7 +1555,10 @@
       font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.1em;
       opacity:.62; margin-bottom:9px; padding-right:80px;
     }
-    .note-card h3 { margin:2px 80px 9px 0; font-size:18px; line-height:1.18; letter-spacing:-.02em; }
+    .note-card h3 {
+      margin:2px 80px 9px 0; font-size:18px; line-height:1.18; letter-spacing:-.02em;
+      overflow-wrap:break-word;
+    }
     .note-card h3 .ph-lock-simple { font-size:14px; opacity:.6; }
     .note-preview {
       color:rgba(7,19,52,.66); line-height:1.42; font-size:13.5px;
@@ -2637,6 +2640,17 @@
 
     @media (max-width: 470px) {
       .stack-sheet-actions { grid-template-columns: 1fr; }
+      /* Narrow cards cannot spare a gutter beside the title, so the controls
+         sit in normal flow above it instead of floating over the corner. */
+      .card-tools {
+        position: static;
+        align-self: flex-end;
+        margin: -4px -4px 2px 0;
+        gap: 4px;
+      }
+      .pin-corner, .card-menu { width: 28px; height: 28px; border-radius: 9px; font-size: 14px; }
+      .note-card h3 { margin-right: 0; font-size: 16.5px; }
+      .note-type { padding-right: 0; }
     }
 
   </style>
