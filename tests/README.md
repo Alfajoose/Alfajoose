@@ -32,6 +32,7 @@ of that line and not the other.
 | `exports.spec.js` | All export formats deliver files; project save/load round-trips; no export shelf. |
 | `memory.spec.js` | Lazy frame buffers: every tool materialises before writing, reclaim never eats artwork. |
 | `selection.spec.js` | Marquee, lasso, delete, cut/copy/paste, flip, fill, scale, rotate, copy-to-next-frame. |
+| `transform.spec.js` | The handle **gesture**: real drags on rotate, scale, move and pivot, mouse and touch. |
 | `visual.spec.js` | 24 pixel baselines. Local only — skipped in CI, since font rasterisation is not portable. |
 
 ## Traps worth knowing before you add a test
@@ -70,6 +71,18 @@ returns zero, which looks exactly like data loss and is not.
 **Writes no longer need to go through `_wf()` to be safe** — a deferred frame's
 context materialises on any touch that could draw. `_wf()` is still the clearer
 way to say "I am about to write", but forgetting it is no longer destructive.
+
+**`selOffsetX/Y` are only live during a drag.** `selMoveEnd` calls
+`selCommitMove()`, which folds the offset into `selBounds` and resets it to
+zero — so reading the offsets after mouseup always gives 0, which looks exactly
+like "the move did nothing". Assert on `selBounds`, or better, on where the ink
+actually ended up.
+
+**The pivot handle sits at the selection's centre.** Grabbing the dead-centre
+pixel to "move the selection" drags the pivot instead and the selection stays
+put. Its radius is deliberately small (12px) so it does not steal ordinary
+drags, but a test aiming at the exact centre finds it every time. Use
+`grabPoint()`.
 
 **Popup placement needs a real assertion.** `toBeVisible()` passes for a panel
 stranded at `left: 0, top: 0`, which is the exact signature of measuring a
