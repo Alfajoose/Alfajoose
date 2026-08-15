@@ -2878,6 +2878,31 @@
       });
     }
 
+    function dbAllAttachmentIds() {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(ATT_STORE, "readonly");
+        // Key-only cursor: never pulls blob bytes into memory just to list ids.
+        const request = tx.objectStore(ATT_STORE).openKeyCursor();
+        const ids = [];
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (cursor) { ids.push(cursor.primaryKey); cursor.continue(); }
+          else resolve(ids);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    function dbDeleteAttachments(ids) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(ATT_STORE, "readwrite");
+        const store = tx.objectStore(ATT_STORE);
+        ids.forEach(id => store.delete(id));
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
     function dbDeleteAttachmentsForNote(noteId) {
       return new Promise((resolve, reject) => {
         const tx = db.transaction(ATT_STORE, "readwrite");
@@ -3033,10 +3058,26 @@
         .replaceAll("'", "&#039;");
     }
 
+    /* Assigning untrusted HTML to a live element's innerHTML runs image
+       onerror handlers before anything can strip them. DOMParser builds an
+       inert document instead: no loads, no handlers, no layout. */
+    const inertParser = new DOMParser();
+    function parseInert(html) {
+      return inertParser.parseFromString(`<body>${html || ""}</body>`, "text/html").body;
+    }
+
+    const BLOCK_TAGS = "P,DIV,LI,H1,H2,H3,H4,H5,H6,TR,BLOCKQUOTE,FIGCAPTION,BR";
+
     function stripHtml(html) {
-      const temp = document.createElement("div");
-      temp.innerHTML = html || "";
-      return (temp.innerText || temp.textContent || "").trim();
+      const body = parseInert(html);
+      // No layout in an inert document, so re-introduce the separators that
+      // innerText used to give us for free.
+      body.querySelectorAll("TD,TH").forEach(el => el.append("\t"));
+      body.querySelectorAll(BLOCK_TAGS).forEach(el => el.append("\n"));
+      return (body.textContent || "")
+        .replace(/\t(?=\n|$)/g, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
     }
 
     function formatDate(timestamp) {
@@ -3048,8 +3089,7 @@
     }
 
     function attachmentStats(html) {
-      const temp = document.createElement("div");
-      temp.innerHTML = html || "";
+      const temp = parseInert(html);
       const images = temp.querySelectorAll("img").length;
       const audio = temp.querySelectorAll("audio").length;
       const tables = temp.querySelectorAll("table").length;
@@ -3065,8 +3105,7 @@
         return { plain: note._plain, stats: note._stats, preview: note._preview };
       }
       const stats = attachmentStats(note.body);
-      const temp = document.createElement("div");
-      temp.innerHTML = note.body || "";
+      const temp = parseInert(note.body);
 
       // Attachments never contribute to the text index; drop them before
       // reading textContent so nothing tries to decode a payload.
@@ -3194,10 +3233,26 @@
       }));
     }
 
+    // The editor has to render the body live, so scrub anything executable
+    // out of it first — a legacy note may predate the paste sanitiser.
+    function sanitizeBodyForEditor(html) {
+      const temp = parseInert(html);
+      temp.querySelectorAll("script,style,meta,link,iframe,object,embed,form").forEach(el => el.remove());
+      temp.querySelectorAll("*").forEach(el => {
+        for (const attr of [...el.attributes]) {
+          const name = attr.name.toLowerCase();
+          if (name.startsWith("on") ||
+              ((name === "href" || name === "src") && /^\s*javascript:/i.test(attr.value))) {
+            el.removeAttribute(attr.name);
+          }
+        }
+      });
+      return temp.innerHTML;
+    }
+
     // Strip the transient URLs back out before the body is persisted.
     function dehydrateBody(html) {
-      const temp = document.createElement("div");
-      temp.innerHTML = html;
+      const temp = parseInert(html);
       temp.querySelectorAll("[data-att]").forEach(el => {
         el.removeAttribute("src");
         if (el.tagName === "A") el.removeAttribute("href");
@@ -3208,8 +3263,7 @@
     // One-time move of legacy data: URLs into the attachment store.
     async function migrateInlineAttachments(note) {
       if (!note.body || !note.body.includes("data:")) return false;
-      const temp = document.createElement("div");
-      temp.innerHTML = note.body;
+      const temp = parseInert(note.body);
       const targets = [...temp.querySelectorAll('img[src^="data:"],audio[src^="data:"],a[href^="data:"]')];
       if (!targets.length) return false;
       for (const el of targets) {
@@ -4167,7 +4221,7 @@
       releaseObjectURLs();               // drop the previous note's blob URLs
       activeNoteId = note.id;
       noteTitle.value = note.title || "";
-      richEditor.innerHTML = note.body || "";
+      richEditor.innerHTML = sanitizeBodyForEditor(note.body);
       hydrateAttachments(richEditor).then(() => updateAttachmentCount());
       folderSelect.value = note.folder || folders[0];
       tagInput.value = note.tag || "personal";
@@ -4998,8 +5052,7 @@
       // cannot strip the images out of the other.
       const originals = await dbAttachmentsForNote(note.id);
       if (originals.length) {
-        const temp = document.createElement("div");
-        temp.innerHTML = copy.body || "";
+        const temp = parseInert(copy.body);
         for (const record of originals) {
           const ref = temp.querySelector(`[data-att="${record.id}"]`);
           if (!ref) continue;
@@ -5152,6 +5205,56 @@
 
     modalBackdrop.addEventListener("click", e => { if (e.target === modalBackdrop) closeModal(); });
 
+    /* Paste is the one path where arbitrary markup enters a note. Keep the
+       structure the editor understands, drop anything executable, and route
+       real images through the attachment store instead of letting a data:
+       URL land in the body. */
+    const PASTE_ALLOWED = new Set([
+      "P","BR","DIV","SPAN","B","STRONG","I","EM","U","S","A","H1","H2","H3","H4",
+      "UL","OL","LI","BLOCKQUOTE","CODE","PRE","TABLE","THEAD","TBODY","TR","TH","TD"
+    ]);
+
+    function sanitizePastedHTML(html) {
+      const temp = parseInert(html);
+      temp.querySelectorAll("script,style,meta,link,iframe,object,embed,form,input,button,svg")
+        .forEach(el => el.remove());
+      // Inline payloads would defeat the attachment store, so drop them here.
+      temp.querySelectorAll('img,audio,video,source').forEach(el => el.remove());
+      temp.querySelectorAll("*").forEach(el => {
+        if (!PASTE_ALLOWED.has(el.tagName)) {
+          el.replaceWith(...el.childNodes);      // keep the text, drop the wrapper
+          return;
+        }
+        for (const attr of [...el.attributes]) {
+          const name = attr.name.toLowerCase();
+          const keep = el.tagName === "A"
+            ? (name === "href" && !/^\s*javascript:/i.test(attr.value))
+            : (name === "colspan" || name === "rowspan");
+          if (!keep) el.removeAttribute(attr.name);
+        }
+        if (el.tagName === "A") { el.target = "_blank"; el.rel = "noopener"; }
+      });
+      return temp.innerHTML;
+    }
+
+    richEditor.addEventListener("paste", event => {
+      const data = event.clipboardData;
+      if (!data) return;
+
+      // An image on the clipboard arrives as a file; store it like any other.
+      const images = [...(data.files || [])].filter(f => /^image\//.test(f.type));
+      if (images.length) {
+        event.preventDefault();
+        handleImages(images);
+        return;
+      }
+
+      const html = data.getData("text/html");
+      if (!html) return;                          // plain text needs no help
+      event.preventDefault();
+      insertHTML(sanitizePastedHTML(html));
+    });
+
     richEditor.addEventListener("click", e => {
       if (e.target.matches('input[type="checkbox"]')) scheduleSave();
 
@@ -5217,6 +5320,23 @@
     /* ------------------------------
        Init
     ------------------------------ */
+    // Deleting an image from a note body leaves its Blob behind, so the store
+    // would grow without bound. Sweep anything no note references any more.
+    async function collectOrphanAttachments() {
+      const referenced = new Set();
+      for (const note of notes) {
+        if (!note.body || !note.body.includes("data-att")) continue;
+        parseInert(note.body).querySelectorAll("[data-att]")
+          .forEach(el => referenced.add(el.dataset.att));
+      }
+      const orphans = (await dbAllAttachmentIds()).filter(id => !referenced.has(id));
+      if (orphans.length) {
+        await dbDeleteAttachments(orphans);
+        console.info(`Reclaimed ${orphans.length} unreferenced attachment(s).`);
+      }
+      return orphans.length;
+    }
+
     async function init() {
       try {
         await openDB();
@@ -5244,6 +5364,8 @@
           console.warn("Attachment migration skipped:", err);
         }
       }
+      try { await collectOrphanAttachments(); }
+      catch (err) { console.warn("Attachment sweep skipped:", err); }
       await reconcileGroups();
       if (localStorage.getItem("np_dark") === "1") document.body.classList.add("dark");
       fillFolderSelect();
