@@ -2105,6 +2105,7 @@
     .fab {
       transition: transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease;
     }
+    body.keyboard-open .fab { opacity: 0; pointer-events: none; }
     .fab:hover { transform: translateY(-3px) rotate(-3deg); box-shadow: 0 22px 40px rgba(0,0,0,.32); }
     .fab:active { transform: scale(.92); }
     .bottom-nav { display: none !important; }
@@ -2117,7 +2118,7 @@
       .search-stage.active .search-options { max-height: 112px; }
       .page { padding-bottom: 100px; }
       .fab { bottom: 24px; }
-      .format-toolbar { bottom: 18px; }
+      .format-toolbar { bottom: calc(18px + var(--keyboard-inset, 0px)); }
     }
 
   
@@ -2177,7 +2178,7 @@
     .format-toolbar {
       left: 50%;
       right: auto;
-      bottom: 25px;
+      bottom: calc(25px + var(--keyboard-inset, 0px));
       width: max-content;
       max-width: calc(100vw - 26px);
       min-height: 58px;
@@ -2310,7 +2311,7 @@
       .editor-actions .save-state { display: none; }
       .paper { min-height: calc(100dvh - 88px); border-radius: 25px; padding: 24px 20px; }
       .rich-editor { min-height: calc(100dvh - 260px); padding-bottom: 100px; }
-      .format-toolbar { bottom: 15px; }
+      .format-toolbar { bottom: calc(15px + var(--keyboard-inset, 0px)); }
       .action-grid { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
       .sheet-action { min-height: 79px; border-radius: 17px; font-size: 11px; }
       .modal-backdrop.sheet-mode { padding: 8px; }
@@ -2791,6 +2792,7 @@
         <div class="settings-list">
           <article class="setting-card"><div class="setting-icon"><i class="ph-duotone ph-moon-stars" aria-hidden="true"></i></div><h3>Dark mode</h3><p>Switch between light and dark appearance.</p><button class="soft-btn" id="settingsDarkBtn">Toggle</button></article>
           <article class="setting-card"><div class="setting-icon"><i class="ph-duotone ph-trash" aria-hidden="true"></i></div><h3>Recently deleted</h3><p>Keep deleted notes available for restoration.</p><button class="soft-btn" id="emptyTrashBtn">Empty trash</button></article>
+          <article class="setting-card"><div class="setting-icon"><i class="ph-duotone ph-database" aria-hidden="true"></i></div><h3>Storage</h3><p id="storageLine">Checking local storage…</p><span class="status" id="storageStatus">Local</span></article>
           <article class="setting-card"><div class="setting-icon"><i class="ph-duotone ph-download-simple" aria-hidden="true"></i></div><h3>Backup</h3><p>Export all notes and attachments as a JSON file.</p><button class="soft-btn" id="settingsExportBtn">Export</button></article>
           <article class="setting-card"><div class="setting-icon"><i class="ph-duotone ph-upload-simple" aria-hidden="true"></i></div><h3>Restore</h3><p>Import notes and attachments from a backup file.</p><button class="soft-btn" id="settingsImportBtn">Import</button></article>
         </div>
@@ -4038,7 +4040,7 @@
         formatToolbar.classList.add("hidden");
       }
       if (name === "features") featuresView.classList.remove("hidden");
-      if (name === "settings") settingsView.classList.remove("hidden");
+      if (name === "settings") { settingsView.classList.remove("hidden"); refreshStorageReadout(); }
 
       document.querySelectorAll(".nav-btn[data-section]").forEach(btn => {
         btn.classList.toggle("active", btn.dataset.section === name && !btn.dataset.filter);
@@ -4590,12 +4592,47 @@
     /* ------------------------------
        Modals
     ------------------------------ */
+    let modalReturnFocus = null;
+
     function closeModal() {
       modalBackdrop.classList.add("hidden");
       modalBackdrop.classList.remove("sheet-mode");
       modalBox.classList.remove("bottom-sheet");
       modalBox.innerHTML = "";
+      // Send focus back where it came from, so keyboard users are not
+      // dumped at the top of the document every time a sheet closes.
+      const target = modalReturnFocus;
+      modalReturnFocus = null;
+      if (target && document.contains(target)) target.focus({ preventScroll: true });
     }
+
+    const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+    // Called once a modal's markup is in place: remember where focus was,
+    // then move it into the dialog.
+    function focusModal() {
+      if (!modalReturnFocus) {
+        const active = document.activeElement;
+        modalReturnFocus = active && active !== document.body ? active : null;
+      }
+      modalBox.setAttribute("role", "dialog");
+      modalBox.setAttribute("aria-modal", "true");
+      const first = modalBox.querySelector('input:not([type="hidden"]), select, textarea')
+        || modalBox.querySelector(FOCUSABLE);
+      first?.focus({ preventScroll: true });
+    }
+
+    // Tab must cycle inside the dialog while it is open.
+    document.addEventListener("keydown", event => {
+      if (modalBackdrop.classList.contains("hidden")) return;
+      if (event.key === "Escape") { event.preventDefault(); closeModal(); return; }
+      if (event.key !== "Tab") return;
+      const items = [...modalBox.querySelectorAll(FOCUSABLE)].filter(el => el.offsetParent !== null);
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
 
     function prepareSheet() {
       modalBackdrop.classList.add("sheet-mode");
@@ -4605,6 +4642,7 @@
 
     function bindModalClose() {
       modalBox.querySelectorAll("[data-close-modal]").forEach(btn => btn.onclick = closeModal);
+      focusModal();
     }
 
     function openFolderModal() {
@@ -5314,6 +5352,22 @@
       el.focus?.();
     }
 
+    /* A fixed element is positioned against the layout viewport, so the
+       on-screen keyboard covers the format toolbar on a phone. Track the
+       visual viewport and lift the toolbar above the keyboard instead. */
+    (function trackKeyboardInset() {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      const apply = () => {
+        const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        document.documentElement.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
+        document.body.classList.toggle("keyboard-open", inset > 120);
+      };
+      vv.addEventListener("resize", apply);
+      vv.addEventListener("scroll", apply);
+      apply();
+    })();
+
     const homeMenuBtn = document.getElementById("homeMenuBtn");
     if (homeMenuBtn) homeMenuBtn.onclick = openHomeMenu;
 
@@ -5335,6 +5389,45 @@
         console.info(`Reclaimed ${orphans.length} unreferenced attachment(s).`);
       }
       return orphans.length;
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return "0 KB";
+      const mb = bytes / 1048576;
+      return mb >= 1 ? `${mb.toFixed(mb >= 10 ? 0 : 1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    }
+
+    // Quota failures are only actionable if you can see what is using space.
+    async function refreshStorageReadout() {
+      const line = document.getElementById("storageLine");
+      const status = document.getElementById("storageStatus");
+      if (!line) return;
+      const noteCount = notes.filter(n => !n.deleted).length;
+      let attCount = 0, attBytes = 0;
+      try {
+        for (const note of notes) {
+          for (const record of await dbAttachmentsForNote(note.id)) { attCount++; attBytes += record.size || 0; }
+        }
+      } catch (_) { /* fall through to the counts we do have */ }
+
+      // The browser's own usage figure is coarse and lags behind writes, so
+      // report our measured total and use the estimate only for headroom.
+      let headroom = "";
+      if (navigator.storage?.estimate) {
+        try {
+          const { usage = 0, quota = 0 } = await navigator.storage.estimate();
+          if (quota) {
+            const free = Math.max(0, quota - usage);
+            headroom = ` · about ${formatBytes(free)} free`;
+            const pct = Math.min(100, Math.round((usage / quota) * 100));
+            status.textContent = pct >= 85 ? "Almost full" : "Local";
+            status.classList.toggle("native", pct >= 85);
+          }
+        } catch (_) {}
+      }
+      line.textContent =
+        `${noteCount} note${noteCount === 1 ? "" : "s"}, ${attCount} attachment${attCount === 1 ? "" : "s"} ` +
+        `(${formatBytes(attBytes)})${headroom}`;
     }
 
     async function init() {
