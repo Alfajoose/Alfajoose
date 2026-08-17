@@ -2,13 +2,14 @@
   "name": "frame-twelve",
   "version": "1.0.0",
   "private": true,
-  "description": "Frame Twelve — frame-by-frame animation studio (single-file web app + Capacitor Android shell)",
+  "description": "Frame Twelve \u2014 frame-by-frame animation studio (single-file web app + Capacitor Android shell)",
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:report": "playwright show-report",
     "artifact": "python3 scripts/make-artifact.py",
-    "sync": "node native/scripts/sync-web.js"
+    "sync": "node native/scripts/sync-web.js",
+    "audit:type": "python3 scripts/audit-type.py"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1"
