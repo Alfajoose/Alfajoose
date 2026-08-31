@@ -4,8 +4,13 @@ A fixed-supply, operator-free token protocol for Robinhood Chain.
 
 > Fixed supply. Fixed rules. No trusted operator. Everything verifiable on-chain.
 
-**Status: Phase 1 — research and design. No production contracts written. Nothing
-deployed to any network.**
+**Status: Phase 2 — `Token.sol` implemented and tested. Nothing deployed to any
+network.**
+
+Design decisions D1–D4 are resolved (see `docs/05-open-decisions.md`): fees come
+from a yield/LP management vault, buybacks execute as a reverse Dutch auction,
+rewards accrue to a v2-style full-range pool, and the launch is a pro-rata
+contribution that seeds the pool atomically.
 
 ## Core invariants
 
@@ -29,6 +34,8 @@ TOTAL SUPPLY = 21,000,000 FOREVER
 | [`docs/04-attack-surface.md`](docs/04-attack-surface.md) | Farming, concentrated-liquidity gaming, buyback manipulation, contract-level hazards, invariant test matrix |
 | [`docs/05-open-decisions.md`](docs/05-open-decisions.md) | Nine decisions blocking implementation, each with a recommendation |
 | [`sim/model.py`](sim/model.py) | Runnable economic model — `python3 sim/model.py`, no dependencies |
+| [`contracts/Token.sol`](contracts/Token.sol) | The fixed-supply ERC-20. No owner, no mint, no burn, no upgrade path |
+| [`test/Token.test.js`](test/Token.test.js) | Invariant tests, including a bytecode scan for `DELEGATECALL`/`SELFDESTRUCT` |
 
 ## Three findings worth reading first
 
@@ -53,8 +60,17 @@ TOTAL SUPPLY = 21,000,000 FOREVER
 This protocol guarantees rules, not outcomes. It does not promise token
 appreciation, returns, APY, buyback prices, or liquidity growth.
 
-## Build environment
+## Build
 
-Hardhat + npm `solc` (solc-js) + OpenZeppelin 5.x. Foundry is preferred for the
-fuzzing and invariant testing the security plan requires, but its installer is
-currently egress-blocked in this environment — see `05-open-decisions.md` D9.
+```bash
+npm install
+npx hardhat compile
+npx hardhat test
+python3 sim/model.py
+```
+
+Hardhat 2 + npm `solc` (solc-js) + OpenZeppelin 5.x. This environment cannot
+reach `binaries.soliditylang.org`, so `hardhat.config.js` points Hardhat at the
+local solc-js build rather than letting it download one. Foundry is preferred
+for the fuzzing and invariant testing the security plan requires, but its
+installer is egress-blocked here — see `05-open-decisions.md` D9.

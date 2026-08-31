@@ -1,8 +1,22 @@
 # 5. Open decisions
 
+**Resolved 2026-08-31** (all four as recommended):
+
+| | Decision | Chosen |
+|---|---|---|
+| D1 | Fee source | **Yield/LP management vault** — performance fee on yield harvested from managed Uniswap positions |
+| D2 | Buyback mechanism | **Reverse Dutch auction** — no oracle, no DEX dependency, ordering-independent |
+| D3 | Rewarded position type | **v2-style full-range pool**, fungible LP token, staked |
+| D4 | Launch | **Pro-rata contribution auto-seeding the pool** |
+
+D5–D9 remain open. The rationale for each resolved decision is preserved below,
+unchanged, so the reasoning stays auditable.
+
+---
+
 Each item blocks a later phase. My recommendation is given for every one; where
-I think the blueprint's stated position is wrong, I say so and why. Nothing here
-is implemented yet.
+I think the blueprint's stated position is wrong, I say so and why. Of the
+resolved decisions, only `Token.sol` has been implemented so far.
 
 ---
 
